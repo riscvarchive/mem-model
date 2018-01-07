@@ -1473,7 +1473,7 @@ memory access $a$ precedes memory access $b$ in preserved program order (and hen
 
 \subsubsection*{Memory Model Axioms}
 
-An execution of a RISC-V program obeys the RVWMO memory consistency model only if it obeys the {\em load value axiom} and the {\em atomicity axiom}.
+An execution of a RISC-V program obeys the RVWMO memory consistency model only if it obeys the {\em load value axiom}, the {\em atomicity axiom}, and the {\em progress axiom}.
 
 \newcommand{\loadvalueaxiom}{
   Each byte of each load returns the corresponding byte written by the whichever of the following two stores comes later in the global memory order:
@@ -1485,8 +1485,11 @@ An execution of a RISC-V program obeys the RVWMO memory consistency model only i
 
 \newcommand{\atomicityaxiom}{If $r$ and $w$ are a paired load and store, and if $s$ is any store from which $r$ returns a value, then there can be no store from another hart to an overlapping memory location which follows both $r$ and $s$ and which precedes $w$ in the global memory order.}
 
+\newcommand{\progressaxiom}{No event may be preceded in the global memory order by an infinite sequence of other events.}
+
 \textbf{Load Value Axiom:} \loadvalueaxiom
 \textbf{Atomicity Axiom:} \atomicityaxiom
+\textbf{Progress Axiom:} \progressaxiom
 
 \subsection{Definition of the RVTSO Memory Model}
 \label{sec:tso}

@@ -787,6 +787,22 @@ In this code snippet, (c) cannot execute until the {\tt fence.i} is cleared.  Th
 Rule~\ref{ppo:addrpocfence} and Figure~\ref{fig:litmus:addrpocfence} present a similar situation:
 Once again, (c) cannot execute until the {\tt fence.i} is cleared.  The {\tt fence.i} cannot clear until both (a) and (b) have at least issued (even if they have not yet returned a value).  Finally, (b) cannot issue until it receives its address from (a).  Therefore, (a) must precede (c) in global memory order.
 
+\subsection{Progress Axiom}
+\label{sec:ppopipeline}
+\begin{tabular}{p{1cm}|p{12cm}}
+  & \progressaxiom \\
+\end{tabular}
+
+The progress axiom ensures a minimal forward progress guarantee.
+It ensures that stores from one hart will eventually be made visible to other harts in the system in a finite amount of time, and that loads from other harts will eventually be able to read those values (or successors thereof).
+Without this rule, it would be legal, for example, for a spinlock to spin infinitely on a value, even with a store from another hart waiting to unlock the spinlock.
+
+The progress axiom is intended not to impose any other notion of fairness or quality of service onto the harts in a RISC-V implementation.
+Any stronger notions of fairness are up to the rest of the ISA and/or up to the platform to define and implement.
+
+The forward progress axiom will in almost all cases be naturally satisfied by any standard cache coherence protocol.
+Implementations with non-coherent caches may have to provide some other mechanism to ensure the eventual visibility of all stores (or successors thereof) to all harts.
+
 
 \section{FENCE.I, SFENCE.VMA, and I/O Fences}
 
