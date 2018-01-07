@@ -1388,19 +1388,25 @@ The precise semantics of these annotations as they apply to RVWMO are described 
   Although the ISA does not currently contain {\tt l\{b|h|w|d\}.aq[rl]} or {\tt s\{b|h|w|d\}.[aq]rl} instructions, we may add them as assembler pseudoinstructions to facilitate forwards compatibility with their potential future addition into the ISA.  These pseudoinstructions will generally assemble per the fence-based mappings of Section~\ref{sec:porting} until if and when the instructions are added to the ISA.  The RVWMO memory model is also designed to easily accommodate the possible future inclusion of such instructions.
 \end{commentary}
 
-\subsubsection*{Dependencies}
+ssubsubsection*{Dependencies}
 The definition of the RVWMO memory model depends in part on the notion of a syntactic dependency.
 A register $r$ read by an instruction $b$ has a syntactic dependency on an instruction $a$ if $a$ precedes $b$ in program order, $r$ is not {\tt x0}, and either of the following hold:
 \begin{enumerate}
   \item $r$ is written by $a$ and read by $b$, and no other instruction between $a$ and $b$ in program order modifies $r$
-  \item There is some other instruction $i$ such that a register read by $i$ has a dependency on $a$, and a register read by $b$ has a dependency on $i$
+  \item There is some other instruction $i$ such that $r$ has a register dependency on $i$, a register $s$ read by $i$ has a dependency on $a$, and $s$ {\em carries a dependency} from $r$
 \end{enumerate}
+
+The question of whether a given instruction carries a dependency from {\em rs1} and/or {\em rs2} to {\em rd} is specified as part of the definition of each instruction; however, we also provide a summary here.
+For all instructions which read {\em rs1} and write {\em rd}, {\em rd} carries a dependency from {\em rs1}, with the exception of {\tt lb}, {\tt lh}, {\tt lw}, {\tt ld}, {\tt lr}, {\tt jalr}, and {\tt csrrw}.
+For all instructions which read {\em rs1} and {\em rs2} and write {\em rd}, {\em rd} carries a dependency from both {\em rs1} and {\em rs2}, with the exception of {\tt amoswap}, {\tt amoadd}, {\tt amoand}, {\tt amoor}, {\tt amoxor}, and {\tt amomax}, {\tt amomin}, and {\tt sc}.
+
+The specification of how dependencies are carried through CSRs will be added in a future revision.
 
 Specific types of dependencies are defined as follows.
 First, for two instructions $a$ and $b$, $b$ has a syntactic address dependency on $a$ if a register used to calculate the address accessed by $b$ has a syntactic dependency on $a$.
 Second, $b$ has a syntactic data dependency on $a$ if $b$ is a store and a register used to calculate the data being written by $b$ has a syntactic dependency on $a$.
 Third, $b$ has a syntactic control dependency on $a$ if there exists a branch $m$ between $a$ and $b$ in program order such that a register checked as part of the condition of $m$ has a syntactic dependency on $a$.
-Finally, $b$ has a syntactic success dependency on $a$ if $a$ is a store-conditional and a register read by $b$ has a register dependency on the store conditional success register written by $a$.
+Finally, $b$ has a syntactic success dependency on $a$ if $a$ is a store-conditional and a register read by $b$ has a register dependency on $a$.
 
 \subsubsection*{Preserved Program Order}
 The global memory order for any given execution of a program respects some but not necessarily all of each hart's program order.
