@@ -1233,9 +1233,8 @@ COMING SOON!
 \section{Formal Axiomatic Specification in Alloy}
 \label{sec:alloy}
 
-We present two formal specifications of the RVWMO memory model in Alloy (\url{http://alloy.mit.edu}).
-
-The first corresponds directly to the natural language model earlier in this chapter.
+We present a formal specification of the RVWMO memory model in Alloy (\url{http://alloy.mit.edu}).
+This model is available online at \url{https://github.com/daniellustig/riscv-memory-model}.
 
 \begin{figure}[h!]
   {
@@ -1263,8 +1262,8 @@ fun ppo : Event->Event {
   + ctrl :> Store
   + (addr+data).successdep
 
-  // CoRR
-  + rdw & po_loc_no_intervening_write
+  // RDW
+  + (po_loc & (fre.rfe))
 
   // pipeline dependency artifacts
   + (addr+data).rfi
@@ -1350,12 +1349,12 @@ sig Fence extends Event {
   sw: lone Fence  // opcode bit
 }
 sig FenceI extends Event {}
-   
+
 // FENCE PPO
-fun FencePRSR : Fence { Fence.(pr & sr) } 
-fun FencePRSW : Fence { Fence.(pr & sw) } 
-fun FencePWSR : Fence { Fence.(pw & sr) } 
-fun FencePWSW : Fence { Fence.(pw & sw) } 
+fun FencePRSR : Fence { Fence.(pr & sr) }
+fun FencePRSW : Fence { Fence.(pr & sw) }
+fun FencePWSR : Fence { Fence.(pw & sr) }
+fun FencePWSW : Fence { Fence.(pw & sw) }
 
 fun ppo_fence : MemoryEvent->MemoryEvent {
     (Load  <: ^po :> FencePRSR).(^po :> Load)
@@ -1372,13 +1371,7 @@ fun ppo_fence : MemoryEvent->MemoryEvent {
   \tt\bfseries\centering\footnotesize
   \begin{lstlisting}
 // auxiliary definitions
-fun po_loc_no_intervening_write : MemoryEvent->MemoryEvent {
-  po_loc - ((po_loc :> Store).po_loc)
-}
-
 fun RFInit : Load { Load - Store.rf }
-fun rsw : Load->Load { ~rf.rf + (RFInit <: address.~address :> RFInit) }
-fun rdw : Load->Load { (Load <: po_loc :> Load) - rsw }
 
 fun po_loc : Event->Event { ^po & address.~address }
 fun same_hart[e: Event] : set Event { e + e.^~po + e.^po }
@@ -1392,13 +1385,24 @@ fact { total[gmo, MemoryEvent] } // gmo is a total order over all MemoryEvents
 
 //rf
 fact { rf in address.~address }
-fun rfi : Store->Load { Store <: po_loc_no_intervening_write :> Load }
+fun internal : Event->Event { Event <: (*po + *~po) :> Event }
+fun rfi : Store->Load { rf & internal }
+fun rfe : Store->Load { rf - internal }
+fun fr : Load->Store {
+  ((~rf.gmo) + (RFInit <: Event->Event)) & (address.~address :> Store)
+}
+fun fre : Load->Store { fr - internal }
 
 //dep
 fact { addr + ctrl + data in ^po }
-fact { successdep in (Write.~rmw) <: ^po }
+fact { successdep in (Store.~rmw) <: ^po }
 fact { ctrl.*po in ctrl }
 fact { rmw in ^po }
+
+// to unclutter the display a bit
+fun mo : MemoryEvent->MemoryEvent {
+  gmo - (gmo.gmo)
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // =Opcode encoding restrictions=
@@ -1406,15 +1410,15 @@ fact { rmw in ^po }
 // opcode bits are either set (encoded, e.g., as f.pr in iden) or unset
 // (f.pr not in iden).  The bits cannot be used for anything else
 fact { pr + pw + sr + sw + aq + rl + sc in iden }
-fact { sc in aq + rl }
+fact { sc in aq & rl }
 fact { Load.sc.rmw in Store.sc and Store.sc.~rmw in Load.sc }
 
 // Fences must have either pr or pw set, and either sr or sw set
 fact { Fence in Fence.(pr + pw) & Fence.(sr + sw) }
 
 // there is no write-acquire, but there is write-strong-acquire
-fact { Store & Acquire in Release }
-fact { Load & Release in Acquire }
+fact { Store.aq in Store.aq.rl }
+fact { Load.rl in Load.aq.rl }
 
 ////////////////////////////////////////////////////////////////////////////////
 // =Alloy shortcuts=
@@ -1428,43 +1432,6 @@ pred total[rel: Event->Event, bag: Event] {
   \label{fig:alloy4}
 \end{figure}
 
-\clearpage
-The second is an equivalent formulation which is slightly more complex but which is more computationally efficient.  We expect that analysis tools will be built off of this second formulation.  Also included are empirical checks that the two models match.
-
-This formulation, however, does not apply when mixed-size accesses are used, nor when {\tt lr}/{\tt sc} to different addresses are used.
-
-\begin{figure}[h!]
-  {
-  \tt\bfseries\centering\footnotesize
-  \begin{lstlisting}
-// coherence order: a total order on the writes to each address
-fun co : Write->Write { Write <: ((address.~address) & gmo) :> Write }
-// from-read: from a read to the coherence successors of the rf-source of the write
-fun fr : Read->Write { ~rf.co + ((Read - Write.rf) <: address.~address :> Write) }
-
-// e = external; i.e., from a different hart
-fun rfe : Store->Load  { rf - iden - ^po - ^~po }
-fun coe : Store->Store { co - iden - ^po - ^~po }
-fun fre :  Load->Store { fr - iden - ^po - ^~po }
-
-pred sc_per_location  { acyclic[rf + co + fr + po_loc] }
-pred atomicity { no rmw & fre.coe }
-pred causality { acyclic[rfe + co + fr + ppo] }
-
-// equality checks
-run RISCV_mm_com_sanity { RISCV_mm_com } for 3
-check RISCV_mm_gmo_com { RISCV_mm => RISCV_mm_com } for 6
-check RISCV_mm_com_gmo {
-  rmw in address.~address => // the rf/co/fr model assumes rmw in same addr
-  RISCV_mm_com =>
-  rfe + co + fr in gmo =>    // pick a gmo which matches rfe+co+fr
-  RISCV_mm
-} for 6
-\end{lstlisting}
-  }
-  \caption{An alternative, more computationally efficient but less complete axiomatic definition}
-  \label{fig:com}
-\end{figure}
 
 \clearpage
 \section{Formal Axiomatic Specification in Herd}
