@@ -1426,10 +1426,10 @@ The subset of program order which must be respected by the global memory order f
 \newcommand{\ppoaddr}{$a$ is a load, and $b$ has a syntactic address dependency on $a$}
 \newcommand{\ppodata}{$a$ is a load, $b$ is a store, and $b$ has a syntactic data dependency on $a$}
 \newcommand{\ppoctrl}{$a$ is a load, $b$ is a store, and $b$ has a syntactic control dependency on $a$}
-\newcommand{\ppordw}{$a$ and $b$ are loads to overlapping memory addresses, there is no store to overlapping memory location(s) between $a$ and $b$ in program order, and $a$ and $b$ return values from different stores}
+\newcommand{\ppordw}{$a$ and $b$ are loads, $x$ is a byte read by both $a$ and $b$, there is no store to $x$ between $a$ and $b$ in program order, and $a$ and $b$ return values for $x$ from different stores}
 %\newcommand{\ppormwrfi}{$a$ is a paired load, $b$ is a load to an overlapping address, $b$ is a load-acquire, and there is no other store to an overlapping address between the store paired with $a$ and $b$}
 \newcommand{\pporfiaq}{$a$ is a paired store, $b$ is a load to an overlapping address, $b$ is a load-acquire, and there is no store to overlapping memory location(s) between $a$ and $b$ in program order}
-\newcommand{\ppoldstld}{$a$ and $b$ are loads, and there exists some store $m$ between $a$ and $b$ in program order such that $m$ has an address or data dependency on $a$, $m$ accesses a memory address that overlaps the address accessed by $b$, and there is no other store to an overlapping memory location(s) between $m$ and $b$ in program order}
+\newcommand{\ppoldstld}{$a$ and $b$ are loads, and there exists some store $m$ between $a$ and $b$ in program order such that $m$ has an address or data dependency on $a$, and $b$ reads a value written by $m$}
 \newcommand{\ppoaddrpo}{$b$ is a store, and there exists some instruction $m$ between $a$ and $b$ in program order such that $m$ has an address dependency on $a$}
 \newcommand{\ppoctrlcfence}{$a$ and $b$ are loads, $b$ has a syntactic control dependency on $a$, and there exists a {\tt fence.i} between the branch used to form the control dependency and $b$ in program order}
 \newcommand{\ppoaddrpocfence}{$a$ is a load, there exists an instruction $m$ which has a syntactic address dependency on $a$, and there exists a {\tt fence.i} between $m$ and $b$ in program order}
