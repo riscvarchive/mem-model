@@ -337,7 +337,7 @@ Consider the example of Figure~\ref{fig:relseq}:
 
 In Figure~\ref{fig:relseq}, the original C/C++ source code has a ``synchronizes-with'' relationship from (c) to (e) via (d), where the latter is part of the ``release sequence'' of (c).
 Therefore, RVWMO must somehow require (c) to appear before (e) in the global memory order.
-Without rule~\ref{ppo:loadtoacq}, (c) would be ordered before (d), but (d) would {\em not} be ordered before (e) due to ``fri; rfi'' behavior (Chapter~\ref{sec:ppo:rdw}).
+Without rule~\ref{ppo:loadtoacq}, (c) would precede (d), but (d) would {\em not} precede (e) due to ``fri; rfi'' behavior (Chapter~\ref{sec:ppo:rdw}).
 Rule~\ref{ppo:loadtoacq} therefore fixes the missing link by placing both the load and the store part of (d) before (e) in the global memory order.
 \end{comment}
 
@@ -397,7 +397,7 @@ ld  a5,0(s1)
 The benefit of using dependencies as a lightweight synchronization mechanism is that the ordering enforcement requirement is limited only to the specific two instructions in question.
 Other non-dependent instructions may be freely-reordered by aggressive implementations.
 One alternative would be to use a load-acquire, but this would enforce ordering for the first load with respect to {\em all} subsequent instructions.
-Another would be to use a {\tt fence r,r}, but this would include all previous and all subsequent loads, making this option each more expensive.
+Another would be to use a {\tt fence r,r}, but this would include all previous and all subsequent loads, making this option more expensive.
 
 Control dependencies behave differently from address and data dependencies in the sense that a control dependency always extends to all instructions following the original target in program order.
 Consider Figure~\ref{fig:litmus:control1}: the instruction at {\tt next} will always execute, but it nevertheless still has control dependency from the first instruction.
@@ -585,7 +585,7 @@ Consider the example of Figure~\ref{fig:litmus:lateatomic}:
 
 The outcome {\tt 0(s0)=3, 0(s1)=2} is legal, with the global memory order of (b0),(c),(d),(e),(a),(b1), where (b0) and (b1) represent the load and store parts, respectively, of (b).
 The atomic operation (b) does not need to grab the reservation until (a) is ready to leave the store buffer.
-Therefore, although (e) is a store to the same address from another hart, and even though (e) lies between (b0) and (b1) in global memory order, this execution does not violate the atomicity axiom because (e) comes after (a) in global memory order.
+Therefore, although (e) is a store to the same address from another hart, and even though (e) lies between (b0) and (b1) in global memory order, this execution does not violate the atomicity axiom because (e) precedes (a) in global memory order.
 
 \begin{verbbox}
 (a) lr t0, 0(a0)
@@ -613,7 +613,7 @@ By preserved program order rule \ref{ppo:->st}, the program order of the three o
     \hline
           & li t0, 1              &     &             \\
       (a) & amoor.aq a0,t0,0(s0)  & (c) & amoadd.aq a1,x0,0(s1) \\
-      (b) & sd~~~~~~ a0,0(s1)     & (d) & ld~~~~~~~ a2,0(s0) \\
+      (b) & sd~~~~~~ t0,0(s1)     & (d) & ld~~~~~~~ a2,0(s0) \\
     \end{tabular}
   }
   ~~
@@ -691,7 +691,7 @@ These four ``compound dependency'' rules reflect behaviors of almost all real pr
   }
   ~~~~
   \diagram
-  \caption{Because of the data dependency from (a) to (b), (a) is also ordered before (c)}
+  \caption{Because of the data dependency from (a) to (b), (a) also precedes (c)}
   \label{fig:litmus:addrdatarfi}
 \end{figure}
 
@@ -713,7 +713,7 @@ Consider Figure~\ref{fig:litmus:addrdatarfi}:
   }
   ~~~~
   \diagram
-  \caption{Because of the extra store between (b) and (c), (a) is no longer necessarily ordered before (c)}
+  \caption{Because of the extra store between (b) and (c), (a) no longer necessarily precedes (c)}
   \label{fig:litmus:addrdatarfi_no}
 \end{figure}
 
@@ -739,7 +739,7 @@ Such a load must appear to execute before the store, but it cannot do so if the 
   }
   ~~~~
   \diagram
-  \caption{Because of the address dependency from (a) to (b), (a) is also ordered before (c)}
+  \caption{Because of the address dependency from (a) to (b), (a) also precedes (c)}
   \label{fig:litmus:addrpo}
 \end{figure}
 
@@ -760,12 +760,12 @@ Consider Figure~\ref{fig:litmus:addrpo}:
   }
   ~~~~
   \diagram
-  \caption{Because of the control dependency from (a) to (c), (a) is also ordered before (c)}
+  \caption{Because of the control dependency from (a) to (c), (a) also precedes (c)}
   \label{fig:litmus:ctrlcfence}
 \end{figure}
 
 Rule~\ref{ppo:ctrlcfence} reflects the idiom of Figure~\ref{fig:litmus:ctrlcfence} for a lightweight acquire fence:
-In this code snippet, (c) cannot execute until the {\tt fence.i} is cleared.  The {\tt fence.i} cannot clear until the branch has executed and drained.  The branch cannot execute until it receives the value from (a) through the {\tt xor}.  Therefore, (a) must be ordered before (c) in the global memory order.
+In this code snippet, (c) cannot execute until the {\tt fence.i} is cleared.  The {\tt fence.i} cannot clear until the branch has executed and drained.  The branch cannot execute until it receives the value from (a) through the {\tt xor}.  Therefore, (a) must precede (c) in the global memory order.
 
 \begin{figure}[h!]
   \centering
@@ -780,12 +780,12 @@ In this code snippet, (c) cannot execute until the {\tt fence.i} is cleared.  Th
   }
   ~~~~
   \diagram
-  \caption{Because of the address dependency from (a) to (b) and the {\tt fence.i} between (b) and (c), (a) is also ordered before (c)}
+  \caption{Because of the address dependency from (a) to (b) and the {\tt fence.i} between (b) and (c), (a) precedes (c)}
   \label{fig:litmus:addrpocfence}
 \end{figure}
 
 Rule~\ref{ppo:addrpocfence} and Figure~\ref{fig:litmus:addrpocfence} present a similar situation:
-Once again, (c) cannot execute until the {\tt fence.i} is cleared.  The {\tt fence.i} cannot clear until both (a) and (b) have at least issued (even if they have not yet returned a value).  Finally, (b) cannot issue until it receives its address from (a).  Therefore, (a) must be ordered before (c).
+Once again, (c) cannot execute until the {\tt fence.i} is cleared.  The {\tt fence.i} cannot clear until both (a) and (b) have at least issued (even if they have not yet returned a value).  Finally, (b) cannot issue until it receives its address from (a).  Therefore, (a) must precede (c) in global memory order.
 
 
 \section{FENCE.I, SFENCE.VMA, and I/O Fences}
@@ -821,7 +821,7 @@ Here, we simply discuss how the various details in each PMA relate to the memory
 
 For I/O, the load value axiom and atomicity axiom in general do not apply, as both reads and writes might have device-specific side effects.
 The preserved program order rules do not generally apply to I/O either.
-Instead, we informally say that memory access $a$ is ordered before memory access $b$ if $a$ precedes $b$ in program order and one or more of the following holds:
+Instead, we informally say that memory access $a$ precedes memory access $b$ in global memory order if $a$ precedes $b$ in program order and one or more of the following holds:
 \begin{enumerate}
   \item $a$ and $b$ are accesses to overlapping addresses in an I/O region
   \item $a$ and $b$ are accesses to the same strongly-ordered I/O region
@@ -1046,7 +1046,7 @@ The {\tt memory\_order\_release} mappings may use {\tt .rl} as an alternative.
 \centering
   \begin{tabular}{|l|l|}
     \hline
-    Ordering Annotation & Fence-based Equivalent \\
+    Ordering Annotation & Fence-based Implementation \\
     \hline
     \tt l\{b|h|w|d|r\}.aq        & \tt l\{b|h|w|d|r\}; fence r,rw \\
     \hline
@@ -1063,7 +1063,7 @@ The {\tt memory\_order\_release} mappings may use {\tt .rl} as an alternative.
     \tt amo<op>.aqrl             & \tt fence rw,rw; amo<op>; fence rw,rw \\
     \hline
   \end{tabular}
-  \caption{Mappings from {\tt .aq} and/or {\tt .rl} to fence-based equivalents.  An alternative mapping places a {\tt fence rw,rw} after the existing {\tt s\{b|h|w|d|c\}} mapping rather than at the front of the {\tt l\{b|h|w|d|r\}} mapping.}
+  \caption{Mappings from {\tt .aq} and/or {\tt .rl} to fence-based implementations.  An alternative mapping places a {\tt fence rw,rw} after the existing {\tt s\{b|h|w|d|c\}} mapping rather than at the front of the {\tt l\{b|h|w|d|r\}} mapping.}
   \label{tab:aqrltofence}
 \end{table}
 
@@ -1157,12 +1157,12 @@ The question of write subsumption can be understood from the following example:
   \label{fig:litmus:subsumption}
 \end{figure}
 
-As written, (a) must follow (f) in the global memory order:
+As written, (a) must precede (f) in the global memory order:
 \begin{itemize}
-  \item (a) follows (c) in the global memory order because of rule 2
-  \item (c) follows (d) in the global memory order because of the Load Value axiom
-  \item (d) follows (e) in the global memory order because of rule 7
-  \item (e) follows (f) in the global memory order because of rule 1
+  \item (a) precedes (c) in the global memory order because of rule 2
+  \item (c) precedes (d) in the global memory order because of the Load Value axiom
+  \item (d) precedes (e) in the global memory order because of rule 7
+  \item (e) precedes (f) in the global memory order because of rule 1
 \end{itemize}
 
 A very aggressive microarchitecture might erroneously decide to discard (e), as (f) supersedes it, and this may in turn lead the microarchitecture to break the now-eliminated dependency between (d) and (f) (and hence also between (a) and (f)).
