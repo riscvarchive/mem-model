@@ -1436,9 +1436,7 @@ pred total[rel: Event->Event, bag: Event] {
 \clearpage
 \section{Formal Axiomatic Specification in Herd}
 
-See also: \url{http://moscova.inria.fr/~maranget/cats7/riscv}
-
-(This herd model is not yet updated to account for rules \ref{ppo:amostore}--\ref{ppo:amoload} and \ref{ppo:success}, and rule {\tt r4} has been tentatively removed from RVWMO.  Updates to come...)
+See also \url{http://moscova.inria.fr/~maranget/cats7/riscv} for a lot of additional supplementary information.
 
 \begin{figure}[h!]
   {
@@ -1469,6 +1467,11 @@ let rsw = rf^-1;rf
 
 let LD-ACQ = R & (Acq|AcqRel)
 and ST-REL = W & (Rel|AcqRel)
+and LD-ACQ-SC = R & AcqRel
+and ST-REL-SC = W & AcqRel
+
+let ST-SC = W & Sc
+and LD-SC = R & Sc
 
 (*************)
 (* ppo rules *)
@@ -1477,33 +1480,23 @@ and ST-REL = W & (Rel|AcqRel)
 let r1 = [M];po-loc;[W]
 and r2 = fence
 and r3 = [LD-ACQ];po;[M]
-and r4 = [R];po-loc;[LD-ACQ]
-and r5 = [M];po;[ST-REL]
-and r6 = [W & AcqRel];po;[R & AcqRel]
-and r7 = [R];addr;[M]
-and r8 = [R];data;[W]
-and r9 = [R];ctrl;[W]
-and r10 = ([R];po-loc-no-w;[R]) \ rsw
-and r11 = [R];(addr|data);[W];po-loc-no-w;[R]
-and r12 = [R];addr;[M];po;[W]
-and r13 = [R];ctrl;[Fence.i];po;[R]
-and r14 = [R];addr;[M];po;[Fence.i];po;[M]
+and r4 = [M];po;[ST-REL]
+and r5 = [ST-REL-SC];po;[LD-ACQ-SC]
+and r6 = [ST-SC];po;[M]
+and r7 = [M];po;[LD-SC]
+and r8 = [R];addr;[M]
+and r9 = [R];data;[W]
+and r10 = [R];ctrl;[W]
+and r11 = depend;instr;success
+and r12 = ([R];po-loc-no-w;[R]) \ rsw
+and r13 = [R];(addr|data);[W];po-loc-no-w;[R]
+and r14 = [R];addr;[M];po;[W]
+and r15 = [R];ctrl;[Fence.i];po;[R]
+and r16 = [R];addr;[M];po;[Fence.i];po;[M]
 
 let ppo =
- r1
-| r2
-| r3
-| r4
-| r5
-| r6
-| r7
-| r8
-| r9
-| r10
-| r11
-| r12
-| r13
-| r14
+ r1 | r2 | r3 | r4 | r5 | r6 | r7 | r8 | r9
+| r10 | r11 | r12 | r13 | r14 | r15 | r16
 \end{lstlisting}
   }
   \caption{{\tt riscv-defs.cat}, part of a herd version of the RVWMO memory model (1/3)}
@@ -1589,6 +1582,6 @@ acyclic co|rfe|fr|ppo as Model
 empty rmw & (fre;coe) as Atomic
 \end{lstlisting}
   }
-  \caption{{\tt riscv.cat}, part of an alternative herd presentation of the RVWMO memory model (2/3)}
+  \caption{{\tt riscv.cat}, part of an alternative herd presentation of the RVWMO memory model (3/3)}
   \label{fig:herd3}
 \end{figure}
