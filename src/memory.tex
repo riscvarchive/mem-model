@@ -356,13 +356,13 @@ For this reason, AMOs annotated with {\tt .aqrl} are strengthened to being fully
 %Such behavior is compatible with higher-level software memory model such as the one used by C/C++ if the mappings of Chapter~\ref{sec:porting} are used.
 %However, such forwarding can be prevented manually if desired by placing a {\tt fence w,r,[addr]} between the store and the load in question.
 
-\subsection{Dependencies (Rules~\ref{ppo:addr}--\ref{ppo:success})}
+\subsection{Dependencies (Rules~\ref{ppo:addr}--\ref{ppo:ctrl})}
 \label{sec:depspart1}
 \begin{tabular}{p{1cm}|p{12cm}}
   & Rule \ref{ppo:addr}: \ppoaddr \\
   & Rule \ref{ppo:data}: \ppodata \\
   & Rule \ref{ppo:ctrl}: \ppoctrl \\
-  & Rule \ref{ppo:success}: \pposuccess \\
+%  & Rule \ref{ppo:success}: \pposuccess \\
 \end{tabular}
 
 Dependencies from a load to a later memory operation in the same hart are respected by the RVWMO memory model.
@@ -430,6 +430,9 @@ Likewise, consider Figure~\ref{fig:litmus:control2}.
 Even though both branch outcomes have the same target, there is still a control dependency from the first instruction in this snippet to the last.
 This definition of control dependency is subtly stronger than what might be seen in other contexts (e.g., C++), but it conforms with standard definitions of control dependencies in the literature.
 
+\begin{tentative}
+  The text below is out of date; we are still discussing success dependencies.
+\end{tentative}
 \begin{figure}[h!]
   \center
   {
@@ -668,13 +671,13 @@ However, the PPO rules covered so far only enforce global memory ordering from (
 \end{comment}
 
 
-\subsection{Pipeline Dependency Artifacts (Rules~\ref{ppo:ld->st->ld}--\ref{ppo:addrpocfence})}
+\subsection{Pipeline Dependency Artifacts (Rules~\ref{ppo:ld->st->ld}--\ref{ppo:addrpo})}
 \label{sec:ppopipeline}
 \begin{tabular}{p{1cm}|p{12cm}}
   & Rule \ref{ppo:ld->st->ld}: \ppoldstld \\
   & Rule \ref{ppo:addrpo}: \ppoaddrpo \\
-  & Rule \ref{ppo:ctrlcfence}: \ppoctrlcfence \\
-  & Rule \ref{ppo:addrpocfence}: \ppoaddrpocfence \\
+%  & Rule \ref{ppo:ctrlcfence}: \ppoctrlcfence \\
+%  & Rule \ref{ppo:addrpocfence}: \ppoaddrpocfence \\
 \end{tabular}
 
 These four ``compound dependency'' rules reflect behaviors of almost all real processor pipeline implementations, and they are added into the model explicitly to simplify the definition of the formal operational memory model and to improve compatibility with known patterns on other architectures.
@@ -746,6 +749,10 @@ Such a load must appear to execute before the store, but it cannot do so if the 
 Consider Figure~\ref{fig:litmus:addrpo}:
 (c) cannot be executed until the address for (b) is resolved, because it may turn out that the addresses match; i.e., that {\tt a0=s1}.  Therefore, (c) cannot be sent to memory before (a) has executed and confirmed whether the addresses to indeed overlap.
 
+\begin{tentative}
+  The text below is out of date; we are likely eliminating fence.i rules entirely.
+\end{tentative}
+
 \begin{figure}[h!]
   \centering
   {
@@ -810,10 +817,9 @@ In this section, we provide an informal description of how the {\tt fence.i}, {\
 
 Instruction fetches and address translation operations (where applicable) follow the RISC-V memory model as well as the rules below.
 \begin{itemize}
-  \item {\tt fence.i}: Conceptually, {\tt fence.i} ensures that no instructions following the {\tt fence.i} are issued until all instructions prior to the {\tt fence.i} have executed (but not necessarily performed globally).
-    This implies that the fetch of each instruction following the {\tt fence.i} in program order appears later in the global memory order than all stores prior to the {\tt fence.i} in program order.
+  \item {\tt fence.i}: Conceptually, {\tt fence.i} ensures that the fetch of each instruction following the {\tt fence.i} in program order appears later in the global memory order than all stores prior to the {\tt fence.i} in program order.
     That in turn means that instruction caches which hardware does not keep coherent with normal memory must be flushed when a {\tt fence.i} instruction is executed.
-    ({\tt fence.i} is also used form the patterns of Chapter~\ref{sec:ppopipeline}.)
+    %({\tt fence.i} is also used form the patterns of Chapter~\ref{sec:ppopipeline}.)
   \item {\tt sfence.vma}: Conceptually, the instruction fetch and address translation operations of each instruction following the {\tt sfence.vma} in program order appears later in the global memory order than all stores prior to the {\tt sfence.vma} in program order.
     This implies that stale entries in the local hart's TLBs must be invalidated.
   \item Conceptually, updates to the page table made by a hardware page table walker form a paired atomic read-modify-write operation subject to the rules of the atomicity axiom
@@ -828,7 +834,8 @@ Here, we simply discuss how the various details in each PMA relate to the memory
 \begin{itemize}
   \item Main memory vs.\@ I/O, and I/O memory ordering PMAs: the memory model as defined applies to main memory regions.  I/O ordering is discussed below.
   \item Supported access types and atomicity PMAs: the memory model is simply applied on top of whatever primitives each region supports.
-  \item Coherence and cacheability PMAs: neither the coherence nor the cacheability PMAs affect the memory model.  The RISC-V privileged specification suggests that hardware-incoherent regions of main memory are discouraged, but the memory model is compatible with hardware coherence, software coherence, implicit coherence due to read-only memory, implicit coherence due to only one agent having access, or otherwise.  Likewise, non-cacheable regions may have more restrictive behavior than cacheable regions, but the set of allowed behaviors does not change regardless.
+  \item Cacheability PMAs: the cacheability PMAs do not affect the memory model.  Non-cacheable regions may have more restrictive behavior than cacheable regions, but the set of allowed behaviors does not change regardless.
+  \item Coherence PMAs: The memory consistency model for memory regions marked as non-coherent in PMAs is currently platform-specific: the load-value axiom, the atomicity axiom, and the progress axiom all may be violated with non-coherent memory.  Note however that coherent memory does not require a hardware cache coherence protocol.  The RISC-V privileged specification suggests that hardware-incoherent regions of main memory are discouraged, but the memory model is compatible with hardware coherence, software coherence, implicit coherence due to read-only memory, implicit coherence due to only one agent having access, or otherwise.
   \item Idempotency PMAs: Idempotency PMAs are used to specify memory regions for which loads and/or stores may have side effects, and this in turn is used by the microarchitecture to determine, e.g., whether prefetches are legal.  This distinction does not affect the memory model.
 \end{itemize}
 
@@ -955,7 +962,7 @@ However, in the meantime, the assembler will generate the same fence-based and/o
 x86 atomics using the LOCK prefix are all sequentially consistent and when ported naively to RISC-V must be marked as {\tt .aqrl}.
 
 A Power {\tt sync}/{\tt hwsync} fence, an ARM {\tt dmb} fence, and an x86 {\tt mfence} are all equivalent to a RISC-V {\tt fence rw,rw}.
-Power {\tt isync} and ARM {\tt isb} map to RISC-V {\tt fence.i}.
+Power {\tt isync} and ARM {\tt isb} map to RISC-V {\tt fence r,r}.
 A Power {\tt lwsync} map onto {\tt fence.tso}, or onto {\tt fence rw,rw} when {\tt fence.tso} is not available.
 ARM {\tt dmb ld} and {\tt dmb st} fences map to RISC-V {\tt fence r,rw} and {\tt fence w,w}, respectively.
 
@@ -1109,17 +1116,17 @@ As a rough guideline for interpreting the PPO rules in RVWMO, we expect the foll
   \item programmers will use PPO rules \ref{ppo:->st}--\ref{ppo:amoload} regularly and actively.
   \item expert programmers will use PPO rules \ref{ppo:addr}--\ref{ppo:ctrl} to speed up critical paths of important data structures.
   %\item expert programmers will occasionally use PPO rules \ref{ppo:rdw}--\ref{ppo:rfiaq} in very aggressive code and/or as part of a longer chain of synchronization.
-  \item even expert programmers will rarely if ever use PPO rules \ref{ppo:success}--\ref{ppo:addrpocfence} directly.  These are included to facilitate common microarchitectural optimizations (rule~\ref{ppo:rdw}) and the operational formal modeling approach (rules \ref{ppo:success} and \ref{ppo:ld->st->ld}--\ref{ppo:addrpocfence}) described in Chapter~\ref{sec:operational}.  They also facilitate the process of porting code from other architectures which have similar rules.
+  \item even expert programmers will rarely if ever use PPO rules \ref{ppo:rdw}--\ref{ppo:addrpo} directly.  These are included to facilitate common microarchitectural optimizations (rule~\ref{ppo:rdw}) and the operational formal modeling approach (rules \ref{ppo:ld->st->ld}--\ref{ppo:addrpo}) described in Chapter~\ref{sec:operational}.  They also facilitate the process of porting code from other architectures which have similar rules.
 \end{itemize}
 
 We also expect the following from the hardware perspective:
 \begin{itemize}
   \item PPO rules \ref{ppo:->st}--\ref{ppo:release} and \ref{ppo:amostore}--\ref{ppo:amoload} reflect well-understood rules that should pose few surprises to architects.
   \item PPO rule \ref{ppo:strongacqrel} may not be immediately obvious to architects, but is somewhat standard nevertheless
-  \item The load value axiom, the atomicity axiom, and PPO rules \ref{ppo:addr}--\ref{ppo:ctrl} and \ref{ppo:ld->st->ld}--\ref{ppo:addrpocfence} reflect rules that most hardware implementations will enforce naturally, unless they contain extreme optimizations.  Of course, implementations should make sure to double check these rules nevertheless.  Hardware must also ensure that syntactic dependencies are not ``optimized away''.
+  \item The load value axiom, the atomicity axiom, and PPO rules \ref{ppo:addr}--\ref{ppo:ctrl} and \ref{ppo:ld->st->ld}--\ref{ppo:addrpo} reflect rules that most hardware implementations will enforce naturally, unless they contain extreme optimizations.  Of course, implementations should make sure to double check these rules nevertheless.  Hardware must also ensure that syntactic dependencies are not ``optimized away''.
   %\item PPO rules \ref{ppo:strongacqrel} and \ref{ppo:rfiaq} may not be obvious or intuitive, and hence they deserve particular attention.
   %\item PPO rules \ref{ppo:strongacqrel} and \ref{ppo:rmwrfi}--\ref{ppo:rfiaq} may not be obvious or intuitive, and hence they deserve particular attention.
-  \item PPO rule \ref{ppo:success} is not obvious, but it is necessary to avoid certain out-of-thin-air-like behavior that appears with store-conditional success values
+  %\item PPO rule \ref{ppo:success} is not obvious, but it is necessary to avoid certain out-of-thin-air-like behavior that appears with store-conditional success values
   \item PPO rule \ref{ppo:rdw} reflects a natural and common hardware optimization, but one that is very subtle and hence is worth double checking carefully.
 \end{itemize}
 
@@ -1142,7 +1149,7 @@ Architectures which implement RVTSO can safely do the following:
 \begin{itemize}
   \item Ignore all {\tt .aq} and {\tt .rl} bits, since these are implicitly always set under RVTSO.  ({\tt .aqrl} cannot be ignored, however, due to PPO rules \ref{ppo:strongacqrel}--\ref{ppo:amoload}.)
   \item Ignore all fences which do not have both {\tt .pw} and {\tt .sr} (unless the fence also orders I/O)
-  \item Ignore PPO rules \ref{ppo:->st} and \ref{ppo:addr}--\ref{ppo:addrpocfence}, since these are redundant with other PPO rules under RVTSO assumptions
+  \item Ignore PPO rules \ref{ppo:->st} and \ref{ppo:addr}--\ref{ppo:addrpo}, since these are redundant with other PPO rules under RVTSO assumptions
 \end{itemize}
 
 Other general notes:
@@ -1187,7 +1194,7 @@ Write subsumption may in other cases be legal, if for example there were no data
 
 \section{Summary of New/Modified ISA Features}
 
-At a high level, PPO rules \ref{ppo:strongacqrel}, \ref{ppo:success}, and \ref{ppo:ld->st->ld}--\ref{ppo:addrpocfence} are all new rules that did not exist in the original ISA spec.  Rule~\ref{ppo:rdw} and the specifics of the atomicity axiom were addressed but not stated in detail.
+At a high level, PPO rules \ref{ppo:strongacqrel} and \ref{ppo:ld->st->ld}--\ref{ppo:addrpo} are new rules that did not exist in the original ISA spec.  Rule~\ref{ppo:rdw} and the specifics of the atomicity axiom were addressed but not stated in detail.
 
 Other new or modified ISA details:
 \begin{itemize}

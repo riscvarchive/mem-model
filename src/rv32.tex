@@ -1517,7 +1517,7 @@ RVTSO behaves just like RVWMO but with the following modifications:
   \item All AMO instructions behave as if {\tt .aq} and {\tt .rl} are both set
 \end{itemize}
 
-These rules render PPO rules \ref{ppo:->st} and \ref{ppo:addr}--\ref{ppo:addrpocfence} redundant.
+These rules render PPO rules \ref{ppo:->st} and \ref{ppo:addr}--\ref{ppo:addrpo} redundant.
 They also make redundant any non-I/O fences that do not have both {\tt .pw} and {\tt .sr} set.
 Finally, they also imply that all AMO instructions are fully-fenced; nothing will be reordered past an AMO.
 
