@@ -1495,7 +1495,7 @@ An execution of a RISC-V program obeys the RVWMO memory consistency model only i
   \end{enumerate}
 }
 
-\newcommand{\atomicityaxiom}{If $r$ and $w$ are a paired load and store, and if $s$ is any store to byte $x$ from which $r$ returns a value and to which $x$ stores, then there can be no store from another hart to byte $i$ following $s$ and preceding $w$ in the global memory order.}
+\newcommand{\atomicityaxiom}{If $r$ and $w$ are a paired load and store, and if $s$ is any store to byte $x$ from which $r$ returns a value, then there can be no store from another hart to byte $x$ following $s$ and preceding $w$ in the global memory order.}
 
 \newcommand{\progressaxiom}{No event may be preceded in the global memory order by an infinite sequence of other events.}
 
