@@ -1399,7 +1399,7 @@ With that, a register $r$ read by an memory operation $b$ has a syntactic depend
 
 The question of whether a given instruction carries a dependency from certain input registers to certain output registers is specified as part of the definition of each instruction; however, we also provide a summary here.
 For all instructions which read {\em rs1} and write {\em rd}, {\em rd} carries a dependency from {\em rs1}, with the exception of {\tt lb}, {\tt lh}, {\tt lw}, {\tt ld}, {\tt lr}, and {\tt jalr}.
-For all instructions which read {\em rs1} and {\em rs2} and write {\em rd}, {\em rd} carries a dependency from both {\em rs1} and {\em rs2}, with the exception of {\tt amoswap}, {\tt amoadd}, {\tt amoand}, {\tt amoor}, {\tt amoxor}, {\tt amomax}, {\tt amomin}, and {\tt sc}.
+For all instructions which read {\em rs1} and {\em rs2} and write {\em rd}, {\em rd} carries a dependency from both {\em rs1} and {\em rs2}, with the exception of {\tt amoswap}, {\tt amoadd}, {\tt amoand}, {\tt amoor}, {\tt amoxor}, {\tt amomax}, {\tt amomin}, and {\tt sc}. With the exception of {\tt amoswap} and {\tt sc}, all of these carry a dependency from {\em rs2} to {\em rd}.
 
 Dependencies through CSRs are tracked at bit granularity, rather than at register granularity.
 CSR instructions carry a dependence from all bits in {\em csr} to {\em rd}, from {\em rs1} to all bits in {\em csr}, and from each bit in {\em csr} to the same bit in {\em csr}, except that {\tt csrrw} does not carry any dependencies from {\em csr} to {\em csr}.
