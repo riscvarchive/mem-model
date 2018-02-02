@@ -1408,7 +1408,7 @@ Finally, some instructions implicitly read and/or write CSRs as part of their no
 Dependencies between memory operations are defined as follows: for any two memory operations $a$ and $b$,
 \begin{itemize}
 \item $b$ has a syntactic address dependency on $a$ if the register used to determine the address accessed by $b$ has a syntactic dependency on $a$
-\item $b$ has a syntactic data dependency on $a$ if $b$ is a store and the register that determines the data being written by $b$ has a syntactic dependency on $b$
+\item $b$ has a syntactic data dependency on $a$ if $b$ is a store and the register that determines the data being written by $b$ has a syntactic dependency on $a$
 \item $b$ has a syntactic control dependency on $a$ if either:
   \begin{itemize}
   \item There exists a branch $m$ between the instructions that generate $a$ and $b$ in program order such that a register checked as part of the condition of $m$ has a syntactic dependency on $a$, or
