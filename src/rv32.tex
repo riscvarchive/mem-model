@@ -1388,30 +1388,45 @@ The precise semantics of these annotations as they apply to RVWMO are described 
   Although the ISA does not currently contain {\tt l\{b|h|w|d\}.aq[rl]} or {\tt s\{b|h|w|d\}.[aq]rl} instructions, we may add them as assembler pseudoinstructions to facilitate forwards compatibility with their potential future addition into the ISA.  These pseudoinstructions will generally assemble per the fence-based mappings of Section~\ref{sec:porting} until if and when the instructions are added to the ISA.  The RVWMO memory model is also designed to easily accommodate the possible future inclusion of such instructions.
 \end{commentary}
 
+
 \subsubsection*{Dependencies}
-The definition of the RVWMO memory model depends in part on the notion of a syntactic dependency.
-A register $r$ read by an instruction $b$ has a syntactic dependency on an instruction $a$ if $a$ precedes $b$ in program order, $r$ is not {\tt x0}, and either of the following hold:
-\begin{enumerate}
-  \item $r$ is written by $a$ and read by $b$, and no other instruction between $a$ and $b$ in program order modifies $r$
-  \item There is some other instruction $i$ such that $r$ has a syntactic dependency on $i$, a register $s$ read by $i$ has a syntactic dependency on $a$, and $s$ {\em carries a dependency} from $r$
-\end{enumerate}
 
-The question of whether a given instruction carries a dependency from {\em rs1} and/or {\em rs2} to {\em rd} is specified as part of the definition of each instruction; however, we also provide a summary here.
-For all instructions which read {\em rs1} and write {\em rd}, {\em rd} carries a dependency from {\em rs1}, with the exception of {\tt lb}, {\tt lh}, {\tt lw}, {\tt ld}, {\tt lr}, {\tt jalr}, and {\tt csrrw}.
-For all instructions which read {\em rs1} and {\em rs2} and write {\em rd}, {\em rd} carries a dependency from both {\em rs1} and {\em rs2}, with the exception of {\tt amoswap}, {\tt amoadd}, {\tt amoand}, {\tt amoor}, {\tt amoxor}, and {\tt amomax}, and {\tt amomin}.
-
-The specification of how dependencies are carried through CSRs will be added in a future revision.
-
-Specific types of dependencies are defined as follows.
+\begin{commentary}
+The definitions below rely on the specification of individual instructions providing:
 \begin{itemize}
-\item For two instructions $a$ and $b$, $b$ has a syntactic address dependency on $a$ if a register used to calculate the address accessed by $b$ has a syntactic dependency on $a$.
-\item $b$ has a syntactic data dependency on $a$ if $b$ is a store and a register used to calculate the data being written by $b$ has a syntactic dependency on $a$.
-\item $b$ has a syntactic control dependency on $a$ if either:
-  \begin{itemize}
-  \item There exists a branch $m$ between $a$ and $b$ in program order such that a register checked as part of the condition of $m$ has a syntactic dependency on $a$, or
-  \item There exists an indirect jump $m$ between $a$ and $b$ in program order such that the register used to calculate the jump address of $m$ has a syntactic dependency on $a$.
-  \end{itemize}
+\item the set of input registers (mostly {\em rs1} and {\em rs2} but potentially could also include {\em CSRs});
+\item memory operation role(s) (i.e. address, data) for each input register;
+\item the set of output registers (mostly {\em rd} or nothing but potentially could also include {\em CSRs});
+\item carry dependencies relation over input-regs $\times$ output-regs; and
+\item the memory operation kinds (i.e. load, store) from which dependencies are carried for each output register.
 \end{itemize}
+
+\note{All the above should be statically determined by the opcode (independent of state). Some instructions, though I'm not aware of any such RISC-V instructions and I recommend avoiding it, might have a ``carry dependencies'' relation that is not independent of the state. For example, the ARMv8 CSEL instruction has two input registers and an output register; the instruction writes the value of ONE of the input registers (which one is determined by a previously calculated condition) to the output register. One might imagine that the output register carries dependencies only from the selected input register (and not both). Accommodating such instructions will involve a more complicated lifting of syntactic dependencies. This is similar to lazy evaluation of instructions such as ``and'' and ``or'', which I also thing we should avoid.}
+
+\note{One can explicitly state that registers such as {\em x0, pc} and {\em minstret} are not in the input/output sets, but this can also be expressed by omitting them from the carries dependencies relations}
+\end{commentary}
+
+The definition of the RVWMO memory model depends in part on the notion of a syntactic dependency.
+We say an input register $r_j$ of instruction $j$ has a syntactic dependency on output register $r_i$ of instruction $i$ if:
+\begin{enumerate}
+\item $r_i$ is the same register as $r_j$ \fixme{overlapping bits?};
+\item $i$ appears before $j$ in program order; and
+\item there is no other instruction between $i$ and $j$ with output register that is the same as $r_i$.
+\end{enumerate}
+In addition, if an input register $r_k$ of instruction $k$ has a syntactic dependency on output register $rout_j$ of instruction $j$, and an input register $rin_j$ of $j$ has a syntactic dependency on output register $r_i$ of instruction $i$, and $rout_j$ carries dependencies from $rin_j$ (as specified for $j$), we say the input register $r_k$ of $k$ has a syntactic dependency on the output register $r_i$ of $i$.
+
+For all the Rv32I/64I instructions, except memory load instructions, {\em rd} carries dependencies from {\em rs1} and {\em rs2}.
+\fixme{{\em csr}? add ``A'' instructions?}
+
+We now lift syntactic dependencies to memory operations. If the input register $r_j$ of instruction $j$ has a syntactic dependency on the output register $r_i$ of instruction $i$ then:
+\begin{itemize}
+\item if $r_j$ has an address role (in the specification of $j$), every memory operation of $j$ has an address dependency on every memory operation of $i$ for which $r_i$ carries a dependency (as specified for $i$); and
+\item if $r_j$ has a data role (in the specification of $j$), every memory store operation of $j$ has a data dependency on every memory operation of $i$ for which $r_i$ carries a dependency (as specified for $i$).
+\end{itemize}
+In addition, for all AMO instructions \fixme{except amoswap?}, there is a data dependency from the memory load operation to the memory store operation of the AMO.
+\fixme{is there an implicit data dependency between paired lr.w/d and sc.w/d?}
+
+Control dependency is somewhat different than address and data dependencies. We first define syntactic control dependency between instructions. Instruction $k$ is said to have a syntactic control dependency from the output register $r_i$ of instruction $i$ if there exists a conditional branch or indirect jump instruction $j$ that appears in program order after $i$ and before $k$, and $j$ has a syntactic dependency on the output register $r_i$ of $i$. Now we lift syntactic control dependency to memory operations. If instruction $j$ has a syntactic control dependency on the output register $r_i$ of instruction $i$, every memory operation of $j$ has a control dependency on every memory operation of $i$ for which $r_i$ carries a dependency (as specified for $i$).
 
 
 \subsubsection*{Preserved Program Order}
