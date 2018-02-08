@@ -443,12 +443,12 @@ A non-finished instruction $i$ with next pseudocode state {\sc Done} can be fini
   Here, a memory store operation is called fixed if the store instruction has a fully determined data.
   \end{enumerate}
 \item $i$ has a fully determined data; and
-\item all program order previous conditional branches are finished.
+\item all program order previous conditional branch and indirect jump instructions are finished.
 \end{enumerate}
 Action:
 \begin{enumerate}
-\item if $i$ is a branch instruction, discard any untaken path of execution, i.e., remove any (non-finished) instructions that are not reachable by the branch taken in $instruction\_tree$; and
-\item record the instruction as finished, i.e., set \lem{finished} to \lem{true}.
+\item if $i$ is a conditional branch or indirect jump instruction, discard any untaken path of execution, i.e., remove any (non-finished) instructions that are not reachable by the branch/jump taken in $instruction\_tree$; and
+\item record the instruction as finished, i.e., set $finished$ to $true$.
 \end{enumerate}
 
 
