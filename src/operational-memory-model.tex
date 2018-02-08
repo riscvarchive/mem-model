@@ -65,11 +65,11 @@ The transitions are introduced below and defined in Section~\ref{sec:omm:thread_
 \noindent Load instructions:
 \begin{itemize}
 \item[$\circ$] \nameref{omm:thread:initiate_mem_read}: At this point the memory footprint of the load is provisionally known and its individual memory load operations can start being satisfied.
-\item \nameref{omm:thread:sat_by_forwarding}: This partially or entirely satisfies a single memory load operation by forwarding from its program order previous writes.
+\item \nameref{omm:thread:sat_by_forwarding}: This partially or entirely satisfies a single memory load operation by forwarding from program order previous memory store operations.
 \item \nameref{omm:thread:sat_from_mem}: This entirely satisfies the outstanding slices of a single memory load operation, from memory.
 \item[$\circ$] \nameref{omm:thread:complete_load}: At this point all the memory load operations of the load have been entirely satisfied and the instruction pseudocode can continue executing.
 A load instruction can be subject to being restarted until the \nameref{omm:thread:finish} transition or \nameref{omm:thread:finish_load_part}.
-But, under some conditions, the model might treat a load instruction as non-restartable if the \nameref{restart_condition} does not indicate the load can be restarted.
+But, under some conditions, the model might treat a load instruction as non-restartable if the \nameref{omm:restart_condition} does not indicate the load can be restarted.
 \end{itemize}
 
 \noindent Store instructions:
@@ -145,7 +145,7 @@ Data-flow dependencies in the model emerge from the fact that register read has 
 Each instruction instance $i$ has a state comprising:
 \begin{itemize}
 \item $program\_loc$, the memory address from which the instruction was fetched;
-\item $instruction\_kind$, identifying whether this is a load, store, AMO, or fence instruction, each with the associated kind; or a conditional branch; or a `simple' instruction;
+\item $instruction\_kind$, identifying whether this is a load, store, AMO, or fence instruction, each with the associated kind; or a branch; or a `simple' instruction;
 \item $regs\_in$, the set of input $reg\_name$s, as statically determined from the opcode;
 \item $regs\_out$, the output $reg\_name$s, as statically determined from the opcode;
 \item $pseudocode\_state$ (or sometimes just `state' for short), one of
@@ -219,12 +219,12 @@ This process terminates when it reaches a fixed-point (no new fetch addresses ar
 Action: construct a freshly initialized instruction instance $i'$ for the instruction in the program memory at $loc$, with state ``{\sc Plain} $next\_state$'', including the static information available from the pseudocode such as its $instruction\_kind$, $regs\_in$, and $regs\_out$, and add $i'$ to the thread's $instruction\_tree$ as a successor of $i$. If the instruction fails to decode, set the state of $i'$ to ``{\sc Pending\_exception} $exception$'' with $exception$ that describes the decoding error.
 
 \begin{commentary}
-This involves only the thread, not the storage subsystem, as we assume a fixed program rather than modelling fetches with memory reads; we do not model self-modifying code.
+This involves only the thread, not the storage subsystem, as we assume a fixed program rather than modelling fetches with memory load operations; we do not model self-modifying code.
 \end{commentary}
 
 
 \paragraph{Initiate memory load operations}\label{omm:thread:initiate_mem_read}
-An instruction instance $i$ with next pseudocode state {\sc Load\_mem}($load\_kind$, $address$, $size$, $load\_cont$) can initiate the corresponding memory reads if:
+An instruction instance $i$ with next pseudocode state {\sc Load\_mem}($load\_kind$, $address$, $size$, $load\_cont$) can initiate the corresponding memory load operations if:
 \begin{enumerate}
 \item all program order previous {\em fence} instructions with {\em .sr} set are finished;
 \item all program order previous {\em fence.i} instructions are finished; \fixme{it was decided that fence.i does not have any memory model effects; remove this}
@@ -347,8 +347,8 @@ Action:
 \paragraph{Commit store instruction}\label{omm:thread:commit_store}
 For an uncommitted store instruction $i$ in state ``{\sc Pending\_mem\_stores} $store\_cont$'', $i$ can be committed if:
 \begin{enumerate}
-\item $i$ has fully determined data (i.e.~the register reads cannot change, see Section~\ref{sec:aux});
-\item all program order previous conditional branch instructions are finished;
+\item $i$ has fully determined data (i.e.~the register reads cannot change, see Section~\ref{sec:omm:aux});
+\item all program order previous conditional branch and indirect jump instructions are finished;
 \item all program order previous {\em fence} instructions with {\em .sw} set are finished;
 \item all program order previous {\em fence.i} instructions are finished; \fixme{remove?}
 \item all program order previous load-acquire instructions are finished;
@@ -370,7 +370,7 @@ It guarantees that previous memory access instructions have taken enough transit
 For an instruction $i$ in state ``{\sc Pending\_mem\_stores} $store\_cont$'', and an unpropagated memory store operation $mso$ in $i.mem\_stores$, the memory store operation can be propagated if:
 \begin{enumerate}
 \item all memory memory store operations of program order previous store instructions that overlap with $mso$ have already propagated;
-\item all memory load operations of program order previous load instructions that overlap with $mso$ have already been satisfied, and (the load instructions) are non-restartable (see \nameref{restart_condition});
+\item all memory load operations of program order previous load instructions that overlap with $mso$ have already been satisfied, and (the load instructions) are non-restartable (see \nameref{omm:restart_condition});
 \item all memory load operations satisfied by forwarding $mso$ are entirely satisfied; and
 \item no AMO or successful {\em lr.w/d} from a different thread has an outstanding lock on a memory store operation slice that overlaps with $mso$.
 \end{enumerate}
@@ -390,7 +390,7 @@ Action: update the state of $i$ to ``{\sc Plain} $store\_cont(true)$''.
 \paragraph{Commit fence}\label{omm:thread:commit_barrier}
 A fence instruction $i$ in state ``{\sc Plain} $next\_state$'' where $next\_state$ is {\sc Fence}($fence\_kind$, $next\_state'$) can be committed if:
 \begin{enumerate}
-\item all program order previous conditional branch instructions are finished;
+\item all program order previous conditional branch and indirect jump instructions are finished;
 \fixme{this looks stronger than intended, but actually it has no observable effect for most fences; the exception is ``fence w,r'', e.g., MP+fence.w.w+ctrlfence.w.r is allowed by Daniel's model but forbidden as a consequence of this condition. Fixing this means changing the invariant that finished instructions are never discarded, to finished load/store instructions are never discarded. Is RISC-V going to include ``fence w,r''?}
 \item if $i$ has {\em .pr} set, all program order previous load instructions are finished;
 \item if $i$ has {\em .pw} set, all program order previous store instructions are finished; and
@@ -438,7 +438,7 @@ A non-finished instruction $i$ with next pseudocode state {\sc Done} can be fini
     \begin{enumerate}
     \item $i'$ has a fully determined memory footprint;
     \item $i'$ has no unpropagated memory store operations that overlap with $cfp'$; and
-    \item if $i'$ is a load with a memory footprint that overlaps with $cfp'$, then all the memory load operations of $i'$ that overlap with $cfp'$ are satisfied and $i'$ can not be restarted (see \nameref{restart_condition}).
+    \item if $i'$ is a load with a memory footprint that overlaps with $cfp'$, then all the memory load operations of $i'$ that overlap with $cfp'$ are satisfied and $i'$ can not be restarted (see \nameref{omm:restart_condition}).
     \end{enumerate}
   Here, a memory store operation is called fixed if the store instruction has a fully determined data.
   \end{enumerate}
@@ -452,58 +452,24 @@ Action:
 \end{enumerate}
 
 
+\subsubsection{Auxiliary Definitions}\label{sec:omm:aux}
+\paragraph{Fully determined}
+Informally, an instruction is said to have {\it fully determined data} if the load instructions feeding its input registers are finished.
+Similarly, it is said to have {\it fully determined memory footprint} if the load instructions feeding its memory operation address register are finished.
+%
+Formally, we first define the notion of {\it fully determined register write}: a register write $w$, of instruction $i$, with the associated $write\_deps$ from $i.reg\_writes$ is said to be {\it fully determined} if one of the following conditions hold:
+\begin{enumerate}
+\item $i$ is finished (for AMOs just the load part); or
+\item the load flag in $write\_deps$ is $false$ and every register write in $write\_deps$ is fully determined.
+\end{enumerate}
+Now, an instruction $i$ is said to have a {\it fully determined data} if all the register writes of $read\_sources$ in $i.reg\_reads$ are fully determined;
+and, $i$ is said to have a {\it fully determined memory footprint} if all the register writes of $read\_sources$ in $i.reg\_reads$ that are associated with registers that feed into $i$'s memory operation address are fully determined.
 
-%%> \subsubsection{Auxiliary Definitions}\label{sec:aux}
-%%>
-%%> \paragraph{Fully determined}
-%%> % This is the
-%%> Informally, an instruction is said to have \emph{fully determined data}
-%%> if the load instructions feeding its input registers are finished.
-%%> Similarly, it is said to have \emph{fully determined memory footprint}
-%%> if the load instructions feeding its memory location register are finished.
-%%> %
-%%> Formally, we first define the notion of \emph{fully determined register write}:
-%%> a register write $mso$, of instruction $i$, with the associated
-%%> \lem{write\_deps} from \lem{i.reg\_writes} is said to be \emph{fully determined}
-%%> if one of the following conditions hold:
-%%> \begin{enumerate}
-%%>   \item $i$ is finished\ifexcl{\ (just the load part for AMOs)}; or
-%%>   \item the load flag in \lem{write\_deps} is \lem{false} and every register
-%%>   write in \lem{write\_deps} is fully determined.
-%%> \end{enumerate}
-%%> %
-%%> Now, an instruction $i$ is said to have a \emph{fully determined data} if all the
-%%> register writes of \lem{read\_sources} in \lem{i.reg\_reads} are fully determined;
-%%> %
-%%> and, $i$ is said to have a \emph{fully determined memory footprint}
-%%> if all the register writes of \lem{read\_sources} in \lem{i.reg\_reads} that are
-%%> associated with registers that feed into $i$'s memory access footprint are fully
-%%> determined.
-%%>
-%%>
-%%> \paragraph{Restart condition}\label{restart_condition}
-%%> To determine if instruction $i$ might be restarted we use the
-%%> following condition:
-%%> $i$ is a non-finished instruction and at least one of the following holds,
-%%> \begin{enumerate}
-%%>     \item there exists a store instruction \lem{s} and an unpropagated write $mso$ of \lem{s} such that applying the
-%%>     action of the \nameref{omm:thread:prop_mem_write} transition to $mso$ will
-%%>     result in the restart of $i$;
-%%>
-%%>     \item there exists a non-finished load instruction \lem{l} and a memory load operation \lem{rr} of \lem{l} such that applying the
-%%>     action of the \nameref{omm:thread:sat_from_mem} transition to \lem{rr}
-%%>     will result in the restart of $i$ (even if \lem{rr} is already satisfied); or
-%%>
-%%>     \item there exists a non-finished instruction $i'$ that might be restarted and
-%%>     $i$ is in its data-flow dependents\ifrelacq{, or $i'$ is a load-acquire}.
-%%> \end{enumerate}
-%%>
-%%>
-%%> \comment[Shaked]{
-%%> \subsubsection{to do to the model}
-%%>
-%%> push ``potential mem write'' -> ``pending mem write'' everywhere
-%%>
-%%> shaked to fix fully-determined-address (and turn it into footprint)
-%%>
-%%> }
+
+\paragraph{Restart condition}\label{omm:restart_condition}
+To determine if instruction $i$ might be restarted the following condition is used: $i$ is a non-finished instruction and at least one of the following holds,
+\begin{enumerate}
+\item there exists a store instruction $s$ and an unpropagated memory store operation $mso$ of $s$ such that applying the action of the \nameref{omm:thread:prop_mem_write} transition to $mso$ will result in the restart of $i$;
+\item there exists a non-finished load instruction $l$ and a memory load operation $mlo$ of $l$ such that applying the action of the \nameref{omm:thread:sat_from_mem} transition to $mlo$ will result in the restart of $i$ (even if $mlo$ is already satisfied); or
+\item there exists a non-finished instruction $i'$, program order before $i$, that might be restarted and $i$ has a data-flow dependency on $i'$, or $i'$ is a load-acquire.
+\end{enumerate}
