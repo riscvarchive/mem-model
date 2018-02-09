@@ -1412,7 +1412,7 @@ With that, a register $s$ read by instruction $i$ has a syntactic dependency on 
 
 Dependencies between memory operations are defined as follows: for any two memory operations $a$ and $b$,
 \begin{itemize}
-\item $b$ has a syntactic address dependency on $a$ if the register read by $b$ which is determines the address accessed by $b$ has a syntactic dependency on $a$
+\item $b$ has a syntactic address dependency on $a$ if the register read by $b$ which determines the address accessed by $b$ has a syntactic dependency on $a$
 \item $b$ has a syntactic data dependency on $a$ if $b$ is a store and the register read by $b$ which determines the data being written by $b$ has a syntactic dependency on $a$, or if $a$ and $b$ are paired
 \item $b$ has a syntactic control dependency on $a$ if there is an instruction $m$ between $a$ and $b$ in program order where a register $s$ read by $m$ has a syntactic dependency on $a$ and either
   \begin{itemize}
