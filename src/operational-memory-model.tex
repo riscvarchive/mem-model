@@ -1,6 +1,12 @@
 \section{An Operational Memory Model}
-%The formal model is defined in
-%executable higher-order logic, written in the \texttt{lem} specification language.
+\fixme{change ``thread'' to ``hart''}
+
+\fixme{change ``input/output'' registers to ``source/destination''}
+
+\fixme{add a limitations section. The model does not currently handle exceptions/traps/interrupts.
+The {\tt rmem} tool gracefully catches and reports instruction decode errors and memory accesses to unallocated memory.
+Instruction fetch does not involve memory accesses (fixed program).
+}
 
 This is an alternative exposition of the RVWMO memory model in operational style.
 It aims to more closely resemble a microarchitecture, while still being abstract, sound and complete (for the fragments of the ISA that it covers), that is, for a given program, it admits an execution if and only if RVWMO allows it.
@@ -118,15 +124,15 @@ Given a pseudocode execution state, it computes the next state, as one of the fo
 
 \begin{center}
 \begin{tabular}{l@{ - }l}
-{\sc Load\_mem}($load\_kind$, $address$, $size$, $load\_continuation$)
+{\sc Load\_mem}($kind$, $address$, $size$, $load\_continuation$)
     & memory load operation\\
 {\sc Atomic\_res}($res\_continuation$)
     & {\em sc} result \fixme{remove?}\\
-{\sc Store\_ea}($store\_kind$, $address$, $size$, $next\_state$)
+{\sc Store\_ea}($kind$, $address$, $size$, $next\_state$)
     & memory store effective address\\
 {\sc Store\_memv}($memory\_value$, $store\_continuation$)
     & memory store value\\
-{\sc Fence}($fence\_kind$, $next\_state$)
+{\sc Fence}($kind$, $next\_state$)
     & fence\\
 {\sc Read\_reg}($reg\_name$, $read\_continuation$)
     & register read\\
@@ -138,11 +144,11 @@ Given a pseudocode execution state, it computes the next state, as one of the fo
     & end of pseudocode\\
 \end{tabular}
 \end{center}
-Here $memory\_value$ and $register\_value$ are lists of bytes,
-$address$ is a 64-bit integer \fixme{what about 32-bit?},
-$load\_kind$ identifies whether the load is regular or atomic ({\em lr} and AMOs), and the type of load (acquire-RCpc, acquire-RCsc, SC, plain),
-$store\_kind$ identifies whether the store is regular or atomic ({\em sc} and AMOs), and the type of store (release-RCpc, release-RCsc, SC, plain),
-$reg\_name$ identifies a register and a slice thereof (start and end bit indices),
+Here $memory\_value$ and $register\_value$ are lists of bytes;
+$address$ is a 64-bit integer \fixme{what about 32-bit?};
+for load/store, $kind$ identifies whether it is regular or atomic ({\em lr/sc} and AMOs), and the type of load/store (acquire/release-RCpc, acquire/release-RCsc, SC, plain);
+for fence, $kind$ identifies the predecessor and successor sets of the instruction;
+$reg\_name$ identifies a register and a slice thereof (start and end bit indices);
 and the continuations describe how the instruction instance will continue for each value that might be provided by the surrounding memory model (the $load\_continuation$ and $read\_continuation$ take the value loaded from memory and read from the previous register write, and $store\_continuation$ takes $false$ for a {\em sc} that failed and $true$ in all other cases).
 
 Notice that stores are split into two steps, {\sc Store\_ea} and {\sc Store\_memv}, the first one makes the memory footprint of the store provisionally known, and the second one adds the value to be stored.
@@ -172,9 +178,9 @@ Each instruction instance $i$ has a state comprising:
   \begin{center}
   \begin{tabular}{l@{ - }l}
   {\sc Plain} $next\_state$                        & ready to make a pseudocode transition; \\
-  {\sc Pending\_mem\_loads} $load\_continuation$   & performing memory load operation(s); \\
-  {\sc Pending\_mem\_stores} $store\_continuation$ & performing memory store operation(s); or \\
-  {\sc Pending\_exception} $exception$             & performing an exception;
+  {\sc Pending\_mem\_loads} $load\_continuation$   & performing memory load operation(s); or \\
+  {\sc Pending\_mem\_stores} $store\_continuation$ & performing memory store operation(s). \\
+%   {\sc Pending\_exception} $exception$             & performing an exception;
   \end{tabular}
   \end{center}
 \item $reg\_reads$, the register reads the instance has performed, including for each one the register write slices it read from;
@@ -201,17 +207,20 @@ The model state of a single hardware thread includes:
 \item $thread\_id$, a unique identifier of the thread;
 \item $register\_data$, the name, bit width, and start bit index for each register;
 \item $initial\_register\_state$, the initial register value for each register;
-\item $initial\_fetch\_address$, the initial fetch address for this thread;
+\item $initial\_fetch\_address$, the initial fetch address;
 \item $instruction\_tree$, a tree of the instruction instances that have been fetched (and not discarded), in program order.
 \end{itemize}
 \fixme{the above has more details than needed; only $thread\_id$ and $instruction\_tree$ are needed}
 
+\subsection{Memory States}
+\fixme{describe the memory state}
 
 \subsection{Model Transitions}\label{sec:omm:thread_trans}
-\fixme{say something about how we describe transitions?}
 
-Each of the paragraphs below describes a single system transition.
-The description starts with a condition that applies
+Each of the paragraphs below describes a single kind of system transition.
+The description starts with a condition over the current system state.
+The transition can be taken in the current state only if the condition is satisfied.
+The condition is followed by an action that is applied to that state when the transition is taken, in order to generate the new system state.
 
 \paragraph{Fetch instruction}\label{omm:thread:fetch}
 A possible program order successor of instruction instance $i$ can be fetched from address $loc$ if:
@@ -221,7 +230,7 @@ A possible program order successor of instruction instance $i$ can be fetched fr
   \begin{enumerate}
   \item for a conditional branch, either the successor address or the branch target address;
   \item for indirect jump instruction ({\em jalr}), when the target address is not yet determined, any address; and
-  \item for any other instruction, the value written to the program counter register ({\em pc}); \fixme{<- this is tide to our Sail model}
+  \item for any other instruction, the value written to the program counter register ({\em pc});
   \end{enumerate}
 \end{enumerate}
 
@@ -236,7 +245,8 @@ Before starting the next iteration of exhaustive search, we collect for each ind
 This process terminates when it reaches a fixed-point (no new fetch addresses are detected).
 \end{commentary}
 
-Action: construct a freshly initialized instruction instance $i'$ for the instruction in the program memory at $loc$, with state ``{\sc Plain} $next\_state$'', including the static information available from the pseudocode such as its $instruction\_kind$, $regs\_in$, and $regs\_out$, and add $i'$ to the thread's $instruction\_tree$ as a successor of $i$. If the instruction fails to decode, set the state of $i'$ to ``{\sc Pending\_exception} $exception$'' with $exception$ that describes the decoding error.
+Action: construct a freshly initialized instruction instance $i'$ for the instruction in the program memory at $loc$, with state ``{\sc Plain} $next\_state$'', computed from the instruction pseudocode, including the static information available from the pseudocode such as its $instruction\_kind$, $regs\_in$, and $regs\_out$, and add $i'$ to the thread's $instruction\_tree$ as a successor of $i$.
+% If the instruction fails to decode, set the state of $i'$ to ``{\sc Pending\_exception} $exception$'' with $exception$ that describes the decoding error.
 
 \begin{commentary}
 This involves only the thread, not the storage subsystem, as we assume a fixed program rather than modelling fetches with memory load operations; we do not model self-modifying code.
@@ -244,7 +254,7 @@ This involves only the thread, not the storage subsystem, as we assume a fixed p
 
 
 \paragraph{Initiate memory load operations}\label{omm:thread:initiate_mem_read}
-An instruction instance $i$ with next pseudocode state {\sc Load\_mem}($load\_kind$, $address$, $size$, $load\_continuation$) can initiate the corresponding memory load operations if:
+An instruction instance $i$ with next pseudocode state {\sc Load\_mem}($kind$, $address$, $size$, $load\_continuation$) can initiate the corresponding memory load operations if:
 \begin{enumerate}
 \item all program order previous {\em fence} instructions with {\em .sr} set are finished;
 \item all program order previous {\em fence.i} instructions are finished; \fixme{it was decided that fence.i does not have any memory model effects; remove this}
@@ -262,6 +272,10 @@ Action:
 \item update the state of $i$ to ``{\sc Pending\_mem\_loads} $load\_continuation$''.
 \end{enumerate}
 
+\begin{commentary}
+In Section~\ref{sec:memprimitives} it is said that misaligned memory accesses may be decomposed at any granularity.
+Here we decompose them to one byte accesses as this granularity subsumes all others.
+\end{commentary}
 
 \paragraph{Satisfy memory load operation by forwarding from stores}\label{omm:thread:sat_by_forwarding}
 For a load instruction instance $i$ in state ``{\sc Pending\_mem\_loads} $load\_continuation$'', and a memory load operation, $mlo$ in $i.mem\_loads$ that has unsatisfied slices, the memory load operation can be partially or entirely satisfied by forwarding from unpropagated memory store operations by store instruction instances that are program order before $i$.
@@ -279,9 +293,9 @@ Action:
 \end{enumerate}
 
 \begin{commentary}
-Forwarding memory store operations to a memory load operation might satisfy only some slices of the load, leaving other slices unsatisfied.
+Forwarding memory store operations to a memory load might satisfy only some slices of the load, leaving other slices unsatisfied.
 
-A consequence of the above is that store-release-RCsc memory store operations cannot be forwarded to load-acquires-RCsc:
+A consequence of the transition condition above is that store-release-RCsc memory store operations cannot be forwarded to load-acquires-RCsc:
 a load-acquire-RCsc instruction cannot be in state ``{\sc Pending\_mem\_loads} $load\_continuation$'' before all the program order previous store-release-RCsc instructions are finished, and $msoss$ does not include memory store operations from finished stores (as those must be propagated memory store operations).
 \end{commentary}
 
@@ -338,7 +352,7 @@ Action: mark the load part of $i$ as finished. If later on $i$ has to be restart
 % \end{commentary}
 
 \paragraph{Initiate memory store operation footprints of store instruction}\label{omm:thread:announce_mem_write_footprint}
-An instruction instance $i$ with next pseudocode state {\sc Store\_ea}($store\_kind$, $address$, $size$, $next\_state$) can announce its pending memory store operation footprint.
+An instruction instance $i$ with next pseudocode state {\sc Store\_ea}($kind$, $address$, $size$, $next\_state$) can announce its pending memory store operation footprint.
 Action:
 \begin{enumerate}
 \item construct the appropriate memory store operations $msos$:
@@ -408,7 +422,7 @@ Action: update the state of $i$ to ``{\sc Plain} $store\_continuation(true)$''.
 
 
 \paragraph{Commit fence}\label{omm:thread:commit_barrier}
-A fence instruction $i$ in state ``{\sc Plain} $next\_state$'' where $next\_state$ is {\sc Fence}($fence\_kind$, $next\_state'$) can be committed if:
+A fence instruction $i$ in state ``{\sc Plain} $next\_state$'' where $next\_state$ is {\sc Fence}($kind$, $next\_state'$) can be committed if:
 \begin{enumerate}
 \item all program order previous conditional branch and indirect jump instructions are finished;
 \fixme{this looks stronger than intended, but actually it has no observable effect for most fences; the exception is ``fence w,r'', e.g., MP+fence.w.w+ctrlfence.w.r is allowed by Daniel's model but forbidden as a consequence of this condition. Fixing this means changing the invariant that finished instructions are never discarded, to finished load/store instructions are never discarded. Is RISC-V going to include ``fence w,r''?}
