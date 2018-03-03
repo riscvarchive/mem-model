@@ -1,10 +1,4 @@
 \section{An Operational Memory Model}
-
-\fixme{add a limitations section. The model does not currently handle exceptions/traps/interrupts.
-The {\tt rmem} tool gracefully catches and reports instruction decode errors and memory accesses to unallocated memory.
-Instruction fetch does not involve memory accesses (fixed program).
-}
-
 This is an alternative exposition of the RVWMO memory model in operational style.
 It aims to more closely resemble a microarchitecture, while still being abstract, sound and complete (for the fragments of the ISA that it covers), that is, for a given program, it admits an execution if and only if RVWMO allows it.
 The operational model is expressed as a state machine, with states that are an abstract representation of hardware machine states.
@@ -63,8 +57,10 @@ The transitions are introduced below and defined in Section~\ref{sec:omm:hart_tr
 
 \noindent Transitions for all instructions:
 \begin{itemize}
-\item \nameref{omm:hart:fetch}: This transition represents a fetch and decode of a new instruction instance, as a program order successor of a previously fetched instruction instance\fixme{, or at the initial fetch address for a hart}.
-\fixme{why is Fetch not eager? is it because of loops? is that a good reason?}
+\item \nameref{omm:hart:fetch}: This transition represents a fetch and decode of a new instruction instance, as a program order successor of a previously fetched instruction instance.
+\fixme{we used to also say ``or at the initial fetch address''; although a complete model will have to handle the initial fetch somehow, we never really thought about it so this addition is more to do with how we hacked rmem;
+hence I think it's better to omit this detail, especially here in the informal part, where the text is not expected to be precise.}
+\fixme{why is Fetch not eager? is it because of loops? is that a good reason? I think fetch should be eager and just add a comment to the description of eager below saying fetching needs some attention}
 \item[$\circ$] \nameref{omm:hart:reg_write}: This is a write of a register value.
 \item[$\circ$] \nameref{omm:hart:reg_read}: This is a read of a register value from the most recent program order predecessor instruction instance that writes to that register.
 \item[$\circ$] \nameref{omm:hart:sail_interp}: This covers pseudocode internal computation, function calls, etc.
@@ -74,7 +70,7 @@ For conditional branch and indirect jump instructions, any program order success
 
 \noindent Transitions of load instructions:
 \begin{itemize}
-\item[$\circ$] \nameref{omm:hart:initiate_mem_read}: At this point the memory footprint of the load is provisionally known and its individual memory load operations can start being satisfied.
+\item[$\circ$] \nameref{omm:hart:initiate_load}: At this point the memory footprint of the load is provisionally known and its individual memory load operations can start being satisfied.
 \item \nameref{omm:hart:sat_by_forwarding}: This partially or entirely satisfies a single memory load operation by forwarding from program order previous memory store operations.
 \item \nameref{omm:hart:sat_from_mem}: This entirely satisfies the outstanding slices of a single memory load operation, from memory.
 \item[$\circ$] \nameref{omm:hart:complete_loads}: At this point all the memory load operations of the instruction have been entirely satisfied and the instruction pseudocode can continue executing.
@@ -84,10 +80,10 @@ But, under some conditions, the model might treat a load instruction as non-rest
 
 \noindent Transitions of store instructions:
 \begin{itemize}
-\item[$\circ$] \nameref{omm:hart:announce_mem_write_footprint}: At this point the memory footprint of the store is provisionally known.
-\item[$\circ$] \nameref{omm:hart:initiate_mem_write}: At this point the memory store operations have their values and program order subsequent memory load operations can be satisfied by forwarding from them.
+\item[$\circ$] \nameref{omm:hart:announce_store_footprint}: At this point the memory footprint of the store is provisionally known.
+\item[$\circ$] \nameref{omm:hart:initiate_store}: At this point the memory store operations have their values and program order subsequent memory load operations can be satisfied by forwarding from them.
 \item[$\circ$] \nameref{omm:hart:commit_stores}: At this point the store operations are guaranteed to happen (the instruction can no longer be restarted or discarded), and they can start being propagated to memory.
-\item \nameref{omm:hart:prop_mem_write}: This propagates a single memory store operation to memory.
+\item \nameref{omm:hart:prop_store}: This propagates a single memory store operation to memory.
 \item[$\circ$] \nameref{omm:hart:complete_stores}: At this point all the memory store operations of the instruction have been propagated to memory, and the instruction pseudocode can continue executing.
 \end{itemize}
 
@@ -156,7 +152,7 @@ For example, for the litmus test LB+fence.r.rw+data-po to be allowed by the oper
 \end{commentary}
 
 The pseudocode of each instruction performs at most one store or one load, except for AMOs that perform exactly one load and one store.
-Those memory accesses are then split apart into the architecturally atomic units by the hart semantics (see \nameref{omm:hart:initiate_mem_read} and \nameref{omm:hart:announce_mem_write_footprint} below).
+Those memory accesses are then split apart into the architecturally atomic units by the hart semantics (see \nameref{omm:hart:initiate_load} and \nameref{omm:hart:announce_store_footprint} below).
 
 Informally, each bit of a register read should be satisfied from a register write by the most recent (in program order) instruction instance that can write that bit (or from the hart's initial register state if there is no such write).
 Hence, it is essential to know the register write footprint of each instruction instance, which we calculate when the instruction instance is created (see the action of \nameref{omm:hart:fetch} below).
@@ -209,8 +205,16 @@ The model state of a single hart includes:
 \end{itemize}
 \fixme{the above has more details than needed; only $hart\_id$ and $instruction\_tree$ are needed}
 
-\subsection{Memory States}
-\fixme{describe the memory state}
+
+\subsection{Shared Memory States}
+The model state of the shared memory includes:
+\begin{itemize}
+\item $recent\_stores$, a map from memory locations to memory store operation slices;
+each memory location is mapped to the most recent memory store operation one byte slice to that location.
+\item $atomics$, a map from memory load operations to sets of memory store operation slices;
+memory load operation of successful atomic load is mapped to the store slices it reads from, excluding slices that have been forwarded to the load from stores that have not been propagated yet.
+\end{itemize}
+
 
 \subsection{Model Transitions}\label{sec:omm:hart_trans}
 
@@ -250,7 +254,7 @@ This involves only the hart, not the storage subsystem, as we assume a fixed pro
 \end{commentary}
 
 
-\paragraph{Initiate memory load operations}\label{omm:hart:initiate_mem_read}
+\paragraph{Initiate memory load operations}\label{omm:hart:initiate_load}
 An instruction instance $i$ with next pseudocode state {\sc Load\_mem}($kind$, $address$, $size$, $load\_continuation$) can initiate the corresponding memory load operations if:
 \begin{enumerate}
 \item all program order previous {\em fence} instructions with {\em .sr} set are finished;
@@ -348,7 +352,7 @@ Action: mark the load part of $i$ as finished. If later on $i$ has to be restart
 % Instead, when the {\em sc} is restarted it will take the same promise/failure transition as before its restart --- based on the value of $i.successful\_atomic$.
 % \end{commentary}
 
-\paragraph{Initiate memory store operation footprints of store instruction}\label{omm:hart:announce_mem_write_footprint}
+\paragraph{Initiate memory store operation footprints of store instruction}\label{omm:hart:announce_store_footprint}
 An instruction instance $i$ with next pseudocode state {\sc Store\_ea}($kind$, $address$, $size$, $next\_state$) can announce its pending memory store operation footprint.
 Action:
 \begin{enumerate}
@@ -363,11 +367,11 @@ Action:
 
 \begin{commentary}
 Note that after taking the transition above the memory store operations do not yet have their values.
-The importance of this transition is that it allows other program order later store instructions to observe the memory footprint of this instruction and if they don't overlap, the later store can propagate out of order.
+The importance of splitting this transition from the transition below is that it allows other program order later store instructions to observe the memory footprint of this instruction, and if they don't overlap, propagate out of order as early as possible (i.e.~before the data register value becomes available).
 \end{commentary}
 
 
-\paragraph{Instantiate memory store operation values of store instruction}\label{omm:hart:initiate_mem_write}
+\paragraph{Instantiate memory store operation values of store instruction}\label{omm:hart:initiate_store}
 An instruction instance $i$ with next pseudocode state {\sc Store\_memv}($memory\_value$, $store\_continuation$) can initiate the values of the memory store operations $i.mem\_stores$.
 Action:
 \begin{enumerate}
@@ -394,11 +398,11 @@ Action: record $i$ as committed.
 \begin{commentary}
 Notice that if condition \ref{omm:commit_store:prev_addrs} is satisfied the conditions \ref{omm:commit_store:prev_stores} and \ref{omm:commit_store:prev_loads} are also satisfied, or will be satisfied after taking just eager transitions.
 Hence requiring them does not strengthen the model.
-It guarantees that previous memory access instructions have taken enough transitions to make the memory operations visible for the condition checks of the \nameref{omm:hart:prop_mem_write} transition.
+It guarantees that previous memory access instructions have taken enough transitions to make the memory operations visible for the condition checks of the \nameref{omm:hart:prop_store} transition.
 \end{commentary}
 
 
-\paragraph{Propagate memory store operation}\label{omm:hart:prop_mem_write}
+\paragraph{Propagate memory store operation}\label{omm:hart:prop_store}
 For an instruction $i$ in state ``{\sc Pending\_mem\_stores} $store\_continuation$'', and an unpropagated memory store operation $mso$ in $i.mem\_stores$, the memory store operation can be propagated if:
 \begin{enumerate}
 \item all memory memory store operations of program order previous store instructions that overlap with $mso$ have already propagated;
@@ -501,7 +505,21 @@ and, $i$ is said to have a {\it fully determined memory footprint} if all the re
 \paragraph{Restart condition}\label{omm:restart_condition}
 To determine if instruction $i$ might be restarted the following condition is used: $i$ is a non-finished instruction and at least one of the following holds,
 \begin{enumerate}
-\item there exists a store instruction $s$ and an unpropagated memory store operation $mso$ of $s$ such that applying the action of the \nameref{omm:hart:prop_mem_write} transition to $mso$ will result in the restart of $i$;
+\item there exists a store instruction $s$ and an unpropagated memory store operation $mso$ of $s$ such that applying the action of the \nameref{omm:hart:prop_store} transition to $mso$ will result in the restart of $i$;
 \item there exists a non-finished load instruction $l$ and a memory load operation $mlo$ of $l$ such that applying the action of the \nameref{omm:hart:sat_from_mem} transition to $mlo$ will result in the restart of $i$ (even if $mlo$ is already satisfied); or
 \item there exists a non-finished instruction $i'$, program order before $i$, that might be restarted and $i$ has a data-flow dependency on $i'$, or $i'$ is a load-acquire.
 \end{enumerate}
+
+
+\subsection{Model Limitations}\label{sec:omm:limitations}
+\begin{itemize}
+\item The model covers user-level RV64I and the ``A'' standard extension.
+\item The model does not cover the TLB.
+\item The model does not properly handle exceptions, traps and interrupts.
+The {\tt rmem} tool catches and reports instruction decode errors and memory accesses to memory locations that were not declared in the initial state.
+\item The model assumes the instructions memory is fixed.
+In particular, the \nameref{omm:hart:fetch} transition does not generate memory load operations, and the shared memory is not involved in the transition.
+Instead, the model depends on an external oracle that provides an opcode when given a memory location.
+\item \fixme{deadlocks}
+\end{itemize}
+
