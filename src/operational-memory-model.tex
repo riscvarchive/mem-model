@@ -53,55 +53,55 @@ Each transition arises from a single instruction instance; it will change the st
 % as atomic units: complete execution of a single instruction instance may
 % involve many transitions, which can be interleaved with those of other
 % instances in the same or other harts, and some of this is programmer-visible.
-The transitions are introduced below and defined in Section~\ref{sec:omm:hart_trans}, with a precondition and a construction of the post-transition model state for each.
+The transitions are introduced below and defined in Section~\ref{sec:omm:transitions}, with a precondition and a construction of the post-transition model state for each.
 
 \noindent Transitions for all instructions:
 \begin{itemize}
-\item \nameref{omm:hart:fetch}: This transition represents a fetch and decode of a new instruction instance, as a program order successor of a previously fetched instruction instance.
+\item \nameref{omm:fetch}: This transition represents a fetch and decode of a new instruction instance, as a program order successor of a previously fetched instruction instance.
 \fixme{we used to also say ``or at the initial fetch address''; although a complete model will have to handle the initial fetch somehow, we never really thought about it so this addition is more to do with how we hacked rmem;
 hence I think it's better to omit this detail, especially here in the informal part, where the text is not expected to be precise.}
 \fixme{why is Fetch not eager? is it because of loops? is that a good reason? I think fetch should be eager and just add a comment to the description of eager below saying fetching needs some attention}
-\item[$\circ$] \nameref{omm:hart:reg_write}: This is a write of a register value.
-\item[$\circ$] \nameref{omm:hart:reg_read}: This is a read of a register value from the most recent program order predecessor instruction instance that writes to that register.
-\item[$\circ$] \nameref{omm:hart:sail_interp}: This covers pseudocode internal computation, function calls, etc.
-\item[$\circ$] \nameref{omm:hart:finish}: At this point the instruction pseudocode is done, the instruction cannot be restarted or discarded, and all memory effects have taken place.
+\item[$\circ$] \nameref{omm:reg_write}: This is a write of a register value.
+\item[$\circ$] \nameref{omm:reg_read}: This is a read of a register value from the most recent program order predecessor instruction instance that writes to that register.
+\item[$\circ$] \nameref{omm:sail_interp}: This covers pseudocode internal computation, function calls, etc.
+\item[$\circ$] \nameref{omm:finish}: At this point the instruction pseudocode is done, the instruction cannot be restarted or discarded, and all memory effects have taken place.
 For conditional branch and indirect jump instructions, any program order successors that were fetched from an address that is not the one that was written to the {\em pc} register are discarded together with the sub-tree of instructions instances below them.
 \end{itemize}
 
 \noindent Transitions of load instructions:
 \begin{itemize}
-\item[$\circ$] \nameref{omm:hart:initiate_load}: At this point the memory footprint of the load is provisionally known and its individual memory load operations can start being satisfied.
-\item \nameref{omm:hart:sat_by_forwarding}: This partially or entirely satisfies a single memory load operation by forwarding from program order previous memory store operations.
-\item \nameref{omm:hart:sat_from_mem}: This entirely satisfies the outstanding slices of a single memory load operation, from memory.
-\item[$\circ$] \nameref{omm:hart:complete_loads}: At this point all the memory load operations of the instruction have been entirely satisfied and the instruction pseudocode can continue executing.
-A load instruction can be subject to being restarted until the \nameref{omm:hart:finish} transition or \nameref{omm:hart:finish_load_part}.
-But, under some conditions, the model might treat a load instruction as non-restartable if the \nameref{omm:restart_condition} does not indicate the load can be restarted.
+\item[$\circ$] \nameref{omm:initiate_load}: At this point the memory footprint of the load is provisionally known and its individual memory load operations can start being satisfied.
+\item \nameref{omm:sat_by_forwarding}: This partially or entirely satisfies a single memory load operation by forwarding from program order previous memory store operations.
+\item \nameref{omm:sat_from_mem}: This entirely satisfies the outstanding slices of a single memory load operation, from memory.
+\item[$\circ$] \nameref{omm:complete_loads}: At this point all the memory load operations of the instruction have been entirely satisfied and the instruction pseudocode can continue executing.
+A load instruction can be subject to being restarted until the \nameref{omm:finish} transition or \nameref{omm:finish_load_part}.
+But, under some conditions, the model might treat a load instruction as non-restartable (e.g.~see \nameref{omm:prop_store}).
 \end{itemize}
 
 \noindent Transitions of store instructions:
 \begin{itemize}
-\item[$\circ$] \nameref{omm:hart:announce_store_footprint}: At this point the memory footprint of the store is provisionally known.
-\item[$\circ$] \nameref{omm:hart:initiate_store}: At this point the memory store operations have their values and program order subsequent memory load operations can be satisfied by forwarding from them.
-\item[$\circ$] \nameref{omm:hart:commit_stores}: At this point the store operations are guaranteed to happen (the instruction can no longer be restarted or discarded), and they can start being propagated to memory.
-\item \nameref{omm:hart:prop_store}: This propagates a single memory store operation to memory.
-\item[$\circ$] \nameref{omm:hart:complete_stores}: At this point all the memory store operations of the instruction have been propagated to memory, and the instruction pseudocode can continue executing.
+\item[$\circ$] \nameref{omm:announce_store_footprint}: At this point the memory footprint of the store is provisionally known.
+\item[$\circ$] \nameref{omm:initiate_store}: At this point the memory store operations have their values and program order subsequent memory load operations can be satisfied by forwarding from them.
+\item[$\circ$] \nameref{omm:commit_stores}: At this point the store operations are guaranteed to happen (the instruction can no longer be restarted or discarded), and they can start being propagated to memory.
+\item \nameref{omm:prop_store}: This propagates a single memory store operation to memory.
+\item[$\circ$] \nameref{omm:complete_stores}: At this point all the memory store operations of the instruction have been propagated to memory, and the instruction pseudocode can continue executing.
 \end{itemize}
 
 \noindent Transitions of {\em  sc} instructions:
 \fixme{these are not needed if we decide the store operation is ordered with the register write}
 \begin{itemize}
-\item \nameref{omm:hart:excl_success}: This commits to the success of the {\em sc}.
-\item \nameref{omm:hart:excl_fail}: This commits to the failure of the {\em sc}.
+\item \nameref{omm:excl_success}: This commits to the success of the {\em sc}.
+\item \nameref{omm:excl_fail}: This commits to the failure of the {\em sc}.
 \end{itemize}
 
 \noindent Transitions of AMO instructions:
 \begin{itemize}
-\item[$\circ$] \nameref{omm:hart:finish_load_part}: At this point the load part of an AMO instruction is done, and the load part cannot be restarted or discarded. If the AMO instruction is restarted after the transition is taken, the instruction rolls back to its state right after this transition.
+\item[$\circ$] \nameref{omm:finish_load_part}: At this point the load part of an AMO instruction is done, and the load part cannot be restarted or discarded. If the AMO instruction is restarted after the transition is taken, the instruction rolls back to its state right after this transition.
 \end{itemize}
 
 \noindent Transitions of fence instructions:
 \begin{itemize}
-\item[$\circ$] \nameref{omm:hart:commit_barrier}
+\item[$\circ$] \nameref{omm:commit_barrier}
 \end{itemize}
 
 \begin{commentary}
@@ -152,21 +152,21 @@ For example, for the litmus test LB+fence.r.rw+data-po to be allowed by the oper
 \end{commentary}
 
 The pseudocode of each instruction performs at most one store or one load, except for AMOs that perform exactly one load and one store.
-Those memory accesses are then split apart into the architecturally atomic units by the hart semantics (see \nameref{omm:hart:initiate_load} and \nameref{omm:hart:announce_store_footprint} below).
+Those memory accesses are then split apart into the architecturally atomic units by the hart semantics (see \nameref{omm:initiate_load} and \nameref{omm:announce_store_footprint} below).
 
 Informally, each bit of a register read should be satisfied from a register write by the most recent (in program order) instruction instance that can write that bit (or from the hart's initial register state if there is no such write).
-Hence, it is essential to know the register write footprint of each instruction instance, which we calculate when the instruction instance is created (see the action of \nameref{omm:hart:fetch} below).
+Hence, it is essential to know the register write footprint of each instruction instance, which we calculate when the instruction instance is created (see the action of \nameref{omm:fetch} below).
 We ensure in the pseudocode that each instruction does at most one register write to each register bit, and also that it does not try to read a register value it just wrote.
 
 Data-flow dependencies (address and data) in the model emerge from the fact that register read has to wait for the appropriate register write to be executed (as described above).
 
-\subsection{Instruction Instance States}\label{sec:omm:inst_state}
+\subsection{Instruction Instance State}\label{sec:omm:inst_state}
 Each instruction instance $i$ has a state comprising:
 \begin{itemize}
 \item $program\_loc$, the memory address from which the instruction was fetched;
 \item $instruction\_kind$, identifying whether this is a load, store, AMO, or fence instruction, each with the associated kind; or a branch; or a `simple' instruction;
-\item $src\_regs$, the set of source $reg\_name$s, as statically determined from the pseudo code of the instruction;
-\item $dst\_regs$, the destination $reg\_name$s, as statically determined from the pseudo code of the instruction;
+\item $src\_regs$, the set of source $reg\_name$s (including system registers), as statically determined from the pseudocode of the instruction;
+\item $dst\_regs$, the destination $reg\_name$s (including system registers), as statically determined from the pseudocode of the instruction;
 \item $pseudocode\_state$ (or sometimes just `state' for short), one of
   \begin{center}
   \begin{tabular}{l@{ - }l}
@@ -177,24 +177,40 @@ Each instruction instance $i$ has a state comprising:
   \end{tabular}
   \end{center}
 \item $reg\_reads$, the register reads the instance has performed, including for each one the register write slices it read from;
-\item $reg\_writes$, the register writes the instance has performed, including for each one dependency information that identifies the register reads and memory load operations (by this instance) that affected it;
-\item $mem\_loads$, a set of memory load operations, including for each one the as-yet-unsatisfied slices (the byte indices that have not been satisfied yet), and, for the satisfied slices, the store slices (each consisting of a memory store operation and byte indices) that satisfied it.
-\item $mem\_stores$, a set of memory store operations, including for each one a flag that indicates whether it has been propagated (passed to the memory) or not.
+\item $reg\_writes$, the register writes the instance has performed;
+%, including for each one dependency information that identifies the register writes by other instances that feed register reads (by this instance) that have data flow to this write, and a flag that indicates if a memory load operation (by this instance) has data flow to this write; \fixme{data flow from store op to rd of SC}
+\fixme{maybe }
+\item $mem\_loads$, a set of memory load operations, and for each one the as-yet-unsatisfied slices (the byte indices that have not been satisfied yet), and, for the satisfied slices, the store slices (each consisting of a memory store operation and byte indices) that satisfied it.
+\item $mem\_stores$, a set of memory store operations, and for each one a flag that indicates whether it has been propagated (passed to the shared memory) or not.
 \item $successful\_atomic$, for {\em sc}, indicates whether the instruction is committed to succeed or fail, or no commitment has been made yet; for AMOs this will always be set to true (committed to succeed).
 \item information recording whether the instance is committed, finished, etc.
 \end{itemize}
 
-Memory load operations include their load kind and their memory footprint (address and size).
-%
-Memory store operations include their store kind, their memory footprint, and, when available, their value.
+Each memory load operation includes a load kind and a memory footprint (address and size).
+Each memory store operations includes a store kind, a memory footprint, and when available, a value.
 
-A load instruction which has initiated (and therefore its $mem\_loads$ is not empty) and for which all the load operations are satisfied (i.e.~there are no unsatisfied load slices) is said to be {\em entirely satisfied}.
+A load instruction instance with a non-empty $mem\_loads$, for which all the load operations are satisfied (i.e.~there are no unsatisfied load slices) is said to be {\it entirely satisfied}.
+
+Informally, an instruction instance is said to have {\it fully determined data} if the load instructions feeding its source registers are finished.
+Similarly, it is said to have a {\it fully determined memory footprint} if the load instructions feeding its memory operation address register are finished.
+%
+Formally, we first define the notion of {\it fully determined register write}: a register write $w$ from $reg\_writes$ of instruction instance $i$ is said to be {\it fully determined} if one of the following conditions hold:
+\begin{enumerate}
+\item $i$ is finished (for AMOs just the load part\fixme{remove?}); or
+\item the value written by $w$ is not affected by a memory operation that $i$ has made, and for every register read that $i$ has made, that affects $w$, the register write from which $i$ read is fully determined.
+\end{enumerate}
+Now, an instruction instance $i$ is said to have a {\it fully determined data} if for every register read $r$ from $reg\_reads$, the register writes that $r$ reads from are fully determined;
+and, $i$ is said to have a {\it fully determined memory footprint} if for every register read $r$ from $reg\_reads$ that feeds into $i$'s memory operation address, the register writes that $r$ reads from are fully determined.
+\begin{commentary}
+The {\tt rmem} tool records for every register write the set of register writes from other instructions that have been read by this instruction at the point of preforming the write.
+By carefully arranging the pseudocode of the instructions covered by the tool we were able to make it so that this is exactly the set of register writes on which the write depends on.
+\end{commentary}
 
 A {\em lr} instruction instance is called {\em successful} after the {\em sc} it is paired with (if such {\em sc} exists) is committed to succeed.
 If a successful {\em lr} has a memory load operation that is mapped, in the atomics map, to a memory store operation slice $ws$, we say the {\em lr} has an outstanding lock on $ws$. \fixme{also the load part of AMO?}
 
 
-\subsection{Hart States}
+\subsection{Hart State}
 The model state of a single hart includes:
 \begin{itemize}
 \item $hart\_id$, a unique identifier of the hart;
@@ -206,7 +222,7 @@ The model state of a single hart includes:
 \fixme{the above has more details than needed; only $hart\_id$ and $instruction\_tree$ are needed}
 
 
-\subsection{Shared Memory States}
+\subsection{Shared Memory State}
 The model state of the shared memory includes:
 \begin{itemize}
 \item $recent\_stores$, a map from memory locations to memory store operation slices;
@@ -216,45 +232,41 @@ memory load operation of successful atomic load is mapped to the store slices it
 \end{itemize}
 
 
-\subsection{Model Transitions}\label{sec:omm:hart_trans}
+\subsection{Transitions}\label{sec:omm:transitions}
 
 Each of the paragraphs below describes a single kind of system transition.
 The description starts with a condition over the current system state.
 The transition can be taken in the current state only if the condition is satisfied.
 The condition is followed by an action that is applied to that state when the transition is taken, in order to generate the new system state.
 
-\paragraph{Fetch instruction}\label{omm:hart:fetch}
+\paragraph{Fetch instruction}\label{omm:fetch}
 A possible program order successor of instruction instance $i$ can be fetched from address $loc$ if:
 \begin{enumerate}
 \item it has not already been fetched, i.e., none of the immediate successors of $i$ in the hart's $instruction\_tree$ are from $loc$; and
 \item $loc$ is a possible next fetch address for $i$:
   \begin{enumerate}
-  \item for a conditional branch, either the successor address or the branch target address;
+  \item for conditional branch, the successor address and the branch target address;
   \item for indirect jump instruction ({\em jalr}), when the target address is not yet determined, any address; and
   \item for any other instruction, the value written to the program counter register ({\em pc});
   \end{enumerate}
 \end{enumerate}
 
-\begin{commentary}
-The possible next fetch addresses are available immediately after fetching $i$ and the model does not need to wait for the pseudocode to write to {\em pc} (as is the case with GPRs), this allows out of order execution, and speculation past conditional branches and jumps.
-For most instructions these addresses are easily attained from a static analysis of the instruction pseudocode.
-The only exception to that is the indirect jump instruction ({\em jalr}).
-%
-The exhaustive search in the {\tt rmem} tool handles this instruction by running the exhaustive search multiple times with a growing set of possible next fetch addresses for each indirect jump.
-The initial search uses empty sets, hence there is no fetch after indirect jump instruction until the pseudocode of the instruction writes to {\em pc}, and then we use that value for fetching the next instruction.
-Before starting the next iteration of exhaustive search, we collect for each indirect jump (grouped by code location) the set of values it wrote to {\em pc} in all the executions in the previous search iteration, and use that as possible next fetch addresses of the instruction.
-This process terminates when it reaches a fixed-point (no new fetch addresses are detected).
-\end{commentary}
 
 Action: construct a freshly initialized instruction instance $i'$ for the instruction in the program memory at $loc$, with state ``{\sc Plain} $next\_state$'', computed from the instruction pseudocode, including the static information available from the pseudocode such as its $instruction\_kind$, $src\_regs$, and $dst\_regs$, and add $i'$ to the hart's $instruction\_tree$ as a successor of $i$.
 % If the instruction fails to decode, set the state of $i'$ to ``{\sc Pending\_exception} $exception$'' with $exception$ that describes the decoding error.
 
 \begin{commentary}
-This involves only the hart, not the storage subsystem, as we assume a fixed program rather than modelling fetches with memory load operations; we do not model self-modifying code.
+The possible next fetch addresses are available immediately after fetching $i$ and the model does not need to wait for the pseudocode to write to {\em pc} (as is the case with GPRs), this allows out of order execution, and speculation past conditional branches and jumps.
+For most instructions these addresses are easily attained from the instruction pseudocode.
+The only exception to that is the indirect jump instruction ({\em jalr}), where the address depends on the value held in a register.
+%
+The exhaustive search in the {\tt rmem} tool handles this instruction by running the exhaustive search multiple times with a growing set of possible next fetch addresses for each indirect jump.
+The initial search uses empty sets, hence there is no fetch after indirect jump instruction until the pseudocode of the instruction writes to {\em pc}, and then we use that value for fetching the next instruction.
+Before starting the next iteration of exhaustive search, we collect for each indirect jump (grouped by code location) the set of values it wrote to {\em pc} in all the executions in the previous search iteration, and use that as possible next fetch addresses of the instruction.
+This process terminates when no new fetch addresses are detected.
 \end{commentary}
 
-
-\paragraph{Initiate memory load operations}\label{omm:hart:initiate_load}
+\paragraph{Initiate memory load operations}\label{omm:initiate_load}
 An instruction instance $i$ with next pseudocode state {\sc Load\_mem}($kind$, $address$, $size$, $load\_continuation$) can initiate the corresponding memory load operations if:
 \begin{enumerate}
 \item all program order previous {\em fence} instructions with {\em .sr} set are finished;
@@ -278,7 +290,7 @@ In Section~\ref{sec:memprimitives} it is said that misaligned memory accesses ma
 Here we decompose them to one byte accesses as this granularity subsumes all others.
 \end{commentary}
 
-\paragraph{Satisfy memory load operation by forwarding from stores}\label{omm:hart:sat_by_forwarding}
+\paragraph{Satisfy memory load operation by forwarding from stores}\label{omm:sat_by_forwarding}
 For a load instruction instance $i$ in state ``{\sc Pending\_mem\_loads} $load\_continuation$'', and a memory load operation, $mlo$ in $i.mem\_loads$ that has unsatisfied slices, the memory load operation can be partially or entirely satisfied by forwarding from unpropagated memory store operations by store instruction instances that are program order before $i$.
 
 Let $msoss$ be the maximal set of unpropagated memory store operation slices from store instruction instances that are program order before $i$ (if $i$ is a load-acquire, exclude {\em sc} and AMO memory store operations \fixme{?}), that overlap with the unsatisfied slices of $mlo$, and which are not superseded by intervening stores that are either propagated or read from by this hart.
@@ -301,28 +313,28 @@ a load-acquire-RCsc instruction cannot be in state ``{\sc Pending\_mem\_loads} $
 \end{commentary}
 
 
-\paragraph{Satisfy memory load operation from memory}\label{omm:hart:sat_from_mem}
+\paragraph{Satisfy memory load operation from memory}\label{omm:sat_from_mem}
 For a load instruction instance $i$ in state ``{\sc Pending\_mem\_loads} $load\_continuation$'', and a memory load operation $mlo$ in $i.mem\_loads$, that has unsatisfied slices, the memory load operation can be satisfied from memory under the condition that if $i$ is an AMO or a successful {\em lr} then no other AMO or successful {\em lr} from a different hart has an outstanding lock on the memory store operations $mlo$ is trying to read from.
-Action: let $msoss$ be the memory store operation slices from memory covering the unsatisfied slices of $mlo$, and apply the action of \nameref{omm:hart:sat_by_forwarding}.
+Action: let $msoss$ be the memory store operation slices from memory covering the unsatisfied slices of $mlo$, and apply the action of \nameref{omm:sat_by_forwarding}.
 In addition, if $i$ is an AMO or a successful {\em lr}, update the atomics map by mapping $mlo$ to the union of $msoss$ and the set of memory store operation slices $mlo$ is already mapped to.
 
 \begin{commentary}
-Note that \nameref{omm:hart:sat_by_forwarding} might leave some slices of the memory load operation unsatisfied.
-\nameref{omm:hart:sat_from_mem}, on the other hand, will always satisfy all the unsatisfied slices of the memory load operation.
+Note that \nameref{omm:sat_by_forwarding} might leave some slices of the memory load operation unsatisfied.
+\nameref{omm:sat_from_mem}, on the other hand, will always satisfy all the unsatisfied slices of the memory load operation.
 \end{commentary}
 
 
-\paragraph{Complete load operations}\label{omm:hart:complete_loads}
+\paragraph{Complete load operations}\label{omm:complete_loads}
 A load instruction instance $i$ in state ``{\sc Pending\_mem\_loads} $load\_continuation$'' can be completed (not to be confused with finished) if all the memory load operations $i.mem\_loads$ are entirely satisfied (i.e.~there are no unsatisfied slices).
 Action: update the state of $i$ to ``{\sc Plain} $next\_state$'', where $next\_state$ is the result of applying $load\_continuation$ to $memory\_value$, and $memory\_value$ is assembled from all the memory store operation slices that satisfied $i.mem\_loads$.
 
 
-\paragraph{Finish load part of AMO instruction}\label{omm:hart:finish_load_part}
-An AMO instruction instance $i$ that has completed the load part, i.e., \nameref{omm:hart:complete_loads} has been taken, can be marked as such if the conditions of \nameref{omm:hart:finish} are satisfied, except for the fully determined data condition for register {\em rs2}.
+\paragraph{Finish load part of AMO instruction}\label{omm:finish_load_part}
+An AMO instruction instance $i$ that has completed the load part, i.e., \nameref{omm:complete_loads} has been taken, can be marked as such if the conditions of \nameref{omm:finish} are satisfied, except for the fully determined data condition for register {\em rs2}.
 Action: mark the load part of $i$ as finished. If later on $i$ has to be restarted, reset its state to the current state.
 
 
-% \paragraph{Guarantee the success of {\em sc}}\label{omm:hart:excl_success}
+% \paragraph{Guarantee the success of {\em sc}}\label{omm:excl_success}
 % A {\em sc} instruction instance $i$ with next pseudocode state {\sc Atomic\_res}($res\_cont$) can be guaranteed to succeed if:
 % \begin{enumerate}
 % \item $i$ has not been made to fail (as recorded in $i.successful\_atomic$);
@@ -337,7 +349,7 @@ Action: mark the load part of $i$ as finished. If later on $i$ has to be restart
 % \end{enumerate}
 %
 %
-% \paragraph{Make a {\em sc} fail}\label{omm:hart:excl_fail}
+% \paragraph{Make a {\em sc} fail}\label{omm:excl_fail}
 % A {\em sc} instruction instance $i$ with next pseudocode state {\sc Atomic\_res}($res\_cont$) can be made to fail if the {\em sc} has not been guaranteed to succeed (as recorded in $i.successful\_atomic$).
 % Action:
 % \begin{enumerate}
@@ -352,7 +364,7 @@ Action: mark the load part of $i$ as finished. If later on $i$ has to be restart
 % Instead, when the {\em sc} is restarted it will take the same promise/failure transition as before its restart --- based on the value of $i.successful\_atomic$.
 % \end{commentary}
 
-\paragraph{Initiate memory store operation footprints of store instruction}\label{omm:hart:announce_store_footprint}
+\paragraph{Initiate memory store operation footprints of store instruction}\label{omm:announce_store_footprint}
 An instruction instance $i$ with next pseudocode state {\sc Store\_ea}($kind$, $address$, $size$, $next\_state$) can announce its pending memory store operation footprint.
 Action:
 \begin{enumerate}
@@ -371,7 +383,7 @@ The importance of splitting this transition from the transition below is that it
 \end{commentary}
 
 
-\paragraph{Instantiate memory store operation values of store instruction}\label{omm:hart:initiate_store}
+\paragraph{Instantiate memory store operation values of store instruction}\label{omm:initiate_store}
 An instruction instance $i$ with next pseudocode state {\sc Store\_memv}($memory\_value$, $store\_continuation$) can initiate the values of the memory store operations $i.mem\_stores$.
 Action:
 \begin{enumerate}
@@ -380,10 +392,10 @@ Action:
 \end{enumerate}
 
 
-\paragraph{Commit store operations}\label{omm:hart:commit_stores}
+\paragraph{Commit store operations}\label{omm:commit_stores}
 For an uncommitted store instruction $i$ in state ``{\sc Pending\_mem\_stores} $store\_continuation$'', $i$ can be committed if:
 \begin{enumerate}
-\item $i$ has fully determined data (i.e.~the register reads cannot change, see Section~\ref{sec:omm:aux});
+\item $i$ has fully determined data;
 \item all program order previous conditional branch and indirect jump instructions are finished;
 \item all program order previous {\em fence} instructions with {\em .sw} set are finished;
 \item all program order previous {\em fence.i} instructions are finished; \fixme{remove?}
@@ -396,20 +408,27 @@ For an uncommitted store instruction $i$ in state ``{\sc Pending\_mem\_stores} $
 Action: record $i$ as committed.
 
 \begin{commentary}
-Notice that if condition \ref{omm:commit_store:prev_addrs} is satisfied the conditions \ref{omm:commit_store:prev_stores} and \ref{omm:commit_store:prev_loads} are also satisfied, or will be satisfied after taking just eager transitions.
-Hence requiring them does not strengthen the model.
-It guarantees that previous memory access instructions have taken enough transitions to make the memory operations visible for the condition checks of the \nameref{omm:hart:prop_store} transition.
+Notice that if condition \ref{omm:commit_store:prev_addrs} is satisfied the conditions \ref{omm:commit_store:prev_stores} and \ref{omm:commit_store:prev_loads} are also satisfied, or will be satisfied after taking some eager transitions.
+Hence, requiring them does not strengthen the model.
+By requiring them, we guarantee that previous memory access instructions have taken enough transitions to make their memory operations visible for the condition check of \nameref{omm:prop_store}, which is the next transition the instruction will take, making that condition simpler.
 \end{commentary}
 
 
-\paragraph{Propagate memory store operation}\label{omm:hart:prop_store}
+\paragraph{Propagate memory store operation}\label{omm:prop_store}
 For an instruction $i$ in state ``{\sc Pending\_mem\_stores} $store\_continuation$'', and an unpropagated memory store operation $mso$ in $i.mem\_stores$, the memory store operation can be propagated if:
 \begin{enumerate}
 \item all memory memory store operations of program order previous store instructions that overlap with $mso$ have already propagated;
-\item all memory load operations of program order previous load instructions that overlap with $mso$ have already been satisfied, and (the load instructions) are non-restartable (see \nameref{omm:restart_condition});
+\item all memory load operations of program order previous load instructions that overlap with $mso$ have already been satisfied, and (the load instructions) are non-restartable (see below);
 \item all memory load operations satisfied by forwarding $mso$ are entirely satisfied; and
 \item no AMO or successful {\em lr} from a different hart has an outstanding lock on a memory store operation slice that overlaps with $mso$.
 \end{enumerate}
+Where, instruction $i'$ might be restarted if it is a non-finished instruction and at least one of the following holds,
+\begin{enumerate}
+\item there exists a store instruction $s$ and an unpropagated memory store operation $mso$ of $s$ such that applying the action of the \nameref{omm:prop_store} transition to $mso$ will result in the restart of $i'$;
+\item there exists a non-finished load instruction $l$ and a memory load operation $mlo$ of $l$ such that applying the action of the \nameref{omm:sat_from_mem} transition to $mlo$ will result in the restart of $i'$ (even if $mlo$ is already satisfied); or
+\item there exists a non-finished instruction $i''$, program order before $i'$, that might be restarted and $i'$ has a data-flow dependency on $i''$, or $i''$ is a load-acquire.
+\end{enumerate}
+And so, an instruction is non-restartable if it does not satisfy the condition above.
 Action:
 \begin{enumerate}
 \item update the memory with $mso$;
@@ -418,12 +437,12 @@ Action:
 \item for every AMO and successful {\em lr} that has read from $mso$ (by forwarding), add the slices of $mso$ this load reads from to the set of memory store operation slices the memory load operation of the load is mapped to in the exclusives map.
 \end{enumerate}
 
-\paragraph{Complete store operations}\label{omm:hart:complete_stores}
+\paragraph{Complete store operations}\label{omm:complete_stores}
 A store instruction $i$ in state ``{\sc Pending\_mem\_stores} $store\_continuation$'', for which all the memory store operations in $i.mem\_stores$ have been propagated, can be completed (not to be confused with finished).
 Action: update the state of $i$ to ``{\sc Plain} $store\_continuation(true)$''.
 
 
-\paragraph{Commit fence}\label{omm:hart:commit_barrier}
+\paragraph{Commit fence}\label{omm:commit_barrier}
 A fence instruction $i$ in state ``{\sc Plain} $next\_state$'' where $next\_state$ is {\sc Fence}($kind$, $next\_state'$) can be committed if:
 \begin{enumerate}
 \item all program order previous conditional branch and indirect jump instructions are finished;
@@ -435,7 +454,7 @@ A fence instruction $i$ in state ``{\sc Plain} $next\_state$'' where $next\_stat
 Action: update the state of $i$ to ``{\sc Plain} $next\_state'$''.
 
 
-\paragraph{Register read}\label{omm:hart:reg_read}
+\paragraph{Register read}\label{omm:reg_read}
 An instruction instance $i$ with next pseudocode state {\sc Read\_reg}($reg\_name$, $read\_cont$) can do a $reg\_name$ register read of if every instruction instance that it needs to read from has already performed the expected $reg\_name$ register write.
 
 Let $read\_sources$ include, for each bit of $reg\_name$, the write to that bit by the most recent (in program order) instruction instance that can write to that bit, if any. If there is no such instruction, the source is the initial register value from $initial\_register\_state$.
@@ -448,22 +467,22 @@ Action:
 \end{enumerate}
 
 
-\paragraph{Register write}\label{omm:hart:reg_write}
+\paragraph{Register write}\label{omm:reg_write}
 An instruction instance $i$ with next pseudocode state {\sc Write\_reg}($reg\_name$, $register\_value$, $next\_state'$) can do a $reg\_name$ register write.
 Action:
 \begin{enumerate}
-\item add $reg\_name$ to $i.reg\_writes$ with $write\_deps$ and $register\_value$; and
+\item add $reg\_name$ to $i.reg\_writes$ with $deps$ and $register\_value$; and
 \item update the state of $i$ to ``{\sc Plain} $next\_state'$''.
 \end{enumerate}
-where $write\_deps$ is the set of all $read\_sources$ from $i.reg\_reads$ and a flag that is set to true if $i$ is a load instruction that has already been entirely satisfied.
+where $deps$ is the set of all $read\_sources$ from $i.reg\_reads$ and a flag that is set to true if $i$ is a load instruction that has already been entirely satisfied.
 
 
-\paragraph{Pseudocode internal step}\label{omm:hart:sail_interp}
+\paragraph{Pseudocode internal step}\label{omm:sail_interp}
 An instruction instance $i$ with next pseudocode state {\sc Internal}($next\_state'$) can do that pseudocode-internal step.
 Action: Update the state of $i$ to ``{\sc Plain} $next\_state'$''.
 
 
-\paragraph{Finish instruction}\label{omm:hart:finish}
+\paragraph{Finish instruction}\label{omm:finish}
 A non-finished instruction $i$ with next pseudocode state {\sc Done} can be finished if:
 \begin{enumerate}
 \item if $i$ is a load instruction:
@@ -474,7 +493,7 @@ A non-finished instruction $i$ with next pseudocode state {\sc Done} can be fini
     \begin{enumerate}
     \item $i'$ has a fully determined memory footprint;
     \item $i'$ has no unpropagated memory store operations that overlap with $cfp'$; and
-    \item if $i'$ is a load with a memory footprint that overlaps with $cfp'$, then all the memory load operations of $i'$ that overlap with $cfp'$ are satisfied and $i'$ cannot be restarted (see \nameref{omm:restart_condition}).
+    \item if $i'$ is a load with a memory footprint that overlaps with $cfp'$, then all the memory load operations of $i'$ that overlap with $cfp'$ are satisfied and $i'$ is non-restartable (see the \nameref{omm:prop_store} transition for how to determined if an instruction is non-restartable).
     \end{enumerate}
   Here, a memory store operation is called fixed if the store instruction has a fully determined data.
   \end{enumerate}
@@ -488,37 +507,14 @@ Action:
 \end{enumerate}
 
 
-\subsection{Auxiliary Definitions}\label{sec:omm:aux}
-\paragraph{Fully determined}
-Informally, an instruction is said to have {\it fully determined data} if the load instructions feeding its source registers are finished.
-Similarly, it is said to have {\it fully determined memory footprint} if the load instructions feeding its memory operation address register are finished.
-%
-Formally, we first define the notion of {\it fully determined register write}: a register write $w$, of instruction $i$, with the associated $write\_deps$ from $i.reg\_writes$ is said to be {\it fully determined} if one of the following conditions hold:
-\begin{enumerate}
-\item $i$ is finished (for AMOs just the load part); or
-\item the load flag in $write\_deps$ is $false$ and every register write in $write\_deps$ is fully determined.
-\end{enumerate}
-Now, an instruction $i$ is said to have a {\it fully determined data} if all the register writes of $read\_sources$ in $i.reg\_reads$ are fully determined;
-and, $i$ is said to have a {\it fully determined memory footprint} if all the register writes of $read\_sources$ in $i.reg\_reads$ that are associated with registers that feed into $i$'s memory operation address are fully determined.
-
-
-\paragraph{Restart condition}\label{omm:restart_condition}
-To determine if instruction $i$ might be restarted the following condition is used: $i$ is a non-finished instruction and at least one of the following holds,
-\begin{enumerate}
-\item there exists a store instruction $s$ and an unpropagated memory store operation $mso$ of $s$ such that applying the action of the \nameref{omm:hart:prop_store} transition to $mso$ will result in the restart of $i$;
-\item there exists a non-finished load instruction $l$ and a memory load operation $mlo$ of $l$ such that applying the action of the \nameref{omm:hart:sat_from_mem} transition to $mlo$ will result in the restart of $i$ (even if $mlo$ is already satisfied); or
-\item there exists a non-finished instruction $i'$, program order before $i$, that might be restarted and $i$ has a data-flow dependency on $i'$, or $i'$ is a load-acquire.
-\end{enumerate}
-
-
-\subsection{Model Limitations}\label{sec:omm:limitations}
+\subsection{Limitations}\label{sec:omm:limitations}
 \begin{itemize}
 \item The model covers user-level RV64I and the ``A'' standard extension.
 \item The model does not cover the TLB.
 \item The model does not properly handle exceptions, traps and interrupts.
 The {\tt rmem} tool catches and reports instruction decode errors and memory accesses to memory locations that were not declared in the initial state.
 \item The model assumes the instructions memory is fixed.
-In particular, the \nameref{omm:hart:fetch} transition does not generate memory load operations, and the shared memory is not involved in the transition.
+In particular, the \nameref{omm:fetch} transition does not generate memory load operations, and the shared memory is not involved in the transition.
 Instead, the model depends on an external oracle that provides an opcode when given a memory location.
 \item \fixme{deadlocks}
 \end{itemize}
