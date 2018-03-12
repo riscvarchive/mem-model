@@ -1,6 +1,6 @@
 \section{An Operational Memory Model}
 This is an alternative exposition of the RVWMO memory model in operational style.
-It aims to more closely resemble a microarchitecture, while still being abstract, sound and complete (for the fragments of the ISA that it covers), that is, for a given program, it admits an execution if and only if RVWMO allows it.
+It aims to more closely resemble a microarchitecture, while still being abstract, sound and complete for the fragments of the ISA that it covers, that is, for a given program, it admits an execution if and only if RVWMO allows it.
 The operational model is expressed as a state machine, with states that are an abstract representation of hardware machine states.
 As such, the model constructs executions incrementally, as opposed to the axiomatic model which requires a complete candidate execution on which the axioms can be checked.
 
@@ -17,7 +17,7 @@ Below is an informal introduction of the model states and transitions.
 The description of the formal model starts in the next section.
 
 \paragraph{Model states}
-A model state consists of a shared memory and a tuple of hart model states.
+A model state consists of a shared memory and a tuple of hart states.
 \begin{center}
 \sffamily
 \begin{tabular}{ccc}
@@ -33,7 +33,7 @@ $\big\uparrow$ $\big\downarrow$ & & $\big\uparrow$ $\big\downarrow$ \\
 The shared memory state records the most recent memory store operation to each location.
 To handle atomic memory accesses ({\em  lr}, {\em sc} and AMOs), the memory is extended with a map (the atomics map) from memory load operations to sets of store slices, that associates a load operation of an atomic load with the store slices it reads from (excluding stores that have been forwarded to the load and have not reached memory yet).
 
-Each hart model state consists principally of a tree of instruction instances, some of which have been finished, and some of which have not.
+Each hart state consists principally of a tree of instruction instances, some of which have been finished, and some of which have not.
 Non-finished instruction instances can be subject to restart, e.g.~if they depend on an out-of-order or speculative load that turns out to be unsound.
 AMOs are treated slightly different in that respect.
 The load part of an AMO can be marked as finished before the entire instruction is finished; when such instruction is restarted it is rolled back to the state it was in when the load part was marked as finished.
@@ -78,6 +78,21 @@ A load instruction can be subject to being restarted until the \nameref{omm:fini
 But, under some conditions, the model might treat a load instruction as non-restartable (e.g.~see \nameref{omm:prop_store}).
 \end{itemize}
 
+\begin{commentary}
+An instance of a load instruction, after being fetched, will typically experience the following transitions in that order:
+\begin{enumerate}
+\item \nameref{omm:reg_read}
+\item \nameref{omm:initiate_load}
+\item \nameref{omm:sat_by_forwarding} and/or \nameref{omm:sat_from_mem} (as many as needed to satisfy all the load operations of the instance)
+\item \nameref{omm:complete_loads}
+\item \nameref{omm:reg_write}
+\item \nameref{omm:finish}
+\end{enumerate}
+Before, between and after the transitions above, any number of \nameref{omm:sail_interp} transitions may appear.
+In addition, a \nameref{omm:fetch} transition for fetching the instruction in the next program location will be available until it is taken.
+\end{commentary}
+
+
 \noindent Transitions of store instructions:
 \begin{itemize}
 \item[$\circ$] \nameref{omm:announce_store_footprint}: At this point the memory footprint of the store is provisionally known.
@@ -114,6 +129,7 @@ The following sections describe the formal operational model.
 \subsection{Intra-instruction Pseudocode Execution}
 The intra-instruction semantics for each instruction instance is expressed as a state machine, essentially running the instruction pseudocode.
 Given a pseudocode execution state, it computes the next state, as one of the following:
+\fixme{regular people will think those are functions! should we use something more like C struct?}
 
 \begin{center}
 \begin{tabular}{l@{ - }l}
@@ -138,11 +154,24 @@ Given a pseudocode execution state, it computes the next state, as one of the fo
 \end{tabular}
 \end{center}
 Here $memory\_value$ and $register\_value$ are lists of bytes;
-$address$ is a 64-bit integer \fixme{what about 32-bit?};
+$address$ is an integer of XLEN bits;
 for load/store, $kind$ identifies whether it is regular or atomic ({\em lr/sc} and AMOs), and the type of load/store (acquire/release-RCpc, acquire/release-RCsc, SC, plain);
 for fence, $kind$ identifies the predecessor and successor sets of the instruction;
 $reg\_name$ identifies a register and a slice thereof (start and end bit indices);
 and the continuations describe how the instruction instance will continue for each value that might be provided by the surrounding memory model (the $load\_continuation$ and $read\_continuation$ take the value loaded from memory and read from the previous register write, and $store\_continuation$ takes $false$ for a {\em sc} that failed and $true$ in all other cases).
+
+\begin{commentary}
+For example, given the load instruction \verb!lw x1,0(x2)!
+An execution of the load instruction {\tt lw x1,0(x2)} will typically go as follows.
+The initial execution state will be computed from the pseudocode for the given opcode.
+This can be expected to be {\sc Read\_reg}({\tt x2}, $read\_continuation$).
+Feeding the value of register {\tt x2}, say 0x4000, to $read\_continuation$ returns
+{\sc Load\_mem}({\tt plain\_load}, 0x4000, 4, $load\_continuation$).
+Feeding the 4 bytes value loaded from memory location 0x4000, say 0x42, to $load\_continuation$ returns
+{\sc Write\_reg}({\tt x1}, 0x42, {\sc Done}).
+
+In practice, before, between and after the states above any number of {\sc Internal}($next\_state$) states may appear.
+\end{commentary}
 
 Notice that stores are split into two steps, {\sc Store\_ea} and {\sc Store\_memv}, the first one makes the memory footprint of the store provisionally known, and the second one adds the value to be stored.
 We ensure these are paired in the pseudocode ({\sc Store\_ea} followed by {\sc Store\_memv}), but there may be other steps between them.
@@ -178,8 +207,6 @@ Each instruction instance $i$ has a state comprising:
   \end{center}
 \item $reg\_reads$, the register reads the instance has performed, including for each one the register write slices it read from;
 \item $reg\_writes$, the register writes the instance has performed;
-%, including for each one dependency information that identifies the register writes by other instances that feed register reads (by this instance) that have data flow to this write, and a flag that indicates if a memory load operation (by this instance) has data flow to this write; \fixme{data flow from store op to rd of SC}
-\fixme{maybe }
 \item $mem\_loads$, a set of memory load operations, and for each one the as-yet-unsatisfied slices (the byte indices that have not been satisfied yet), and, for the satisfied slices, the store slices (each consisting of a memory store operation and byte indices) that satisfied it.
 \item $mem\_stores$, a set of memory store operations, and for each one a flag that indicates whether it has been propagated (passed to the shared memory) or not.
 \item $successful\_atomic$, for {\em sc}, indicates whether the instruction is committed to succeed or fail, or no commitment has been made yet; for AMOs this will always be set to true (committed to succeed).
@@ -509,13 +536,13 @@ Action:
 
 \subsection{Limitations}\label{sec:omm:limitations}
 \begin{itemize}
-\item The model covers user-level RV64I and the ``A'' standard extension.
-\item The model does not cover the TLB.
-\item The model does not properly handle exceptions, traps and interrupts.
+\item The model covers user-level RV64I and the ``A'' standard extension.\fixme{also RV32I?}
+\item The model does not cover TLB related effects.
+\item The model does not cover exceptions, traps and interrupts.
 The {\tt rmem} tool catches and reports instruction decode errors and memory accesses to memory locations that were not declared in the initial state.
 \item The model assumes the instructions memory is fixed.
 In particular, the \nameref{omm:fetch} transition does not generate memory load operations, and the shared memory is not involved in the transition.
 Instead, the model depends on an external oracle that provides an opcode when given a memory location.
-\item \fixme{deadlocks}
+\item \fixme{deadlocks?}
 \end{itemize}
 
