@@ -1,0 +1,433 @@
+\chapter{RVWMO Dependencies}
+\label{ch:deps}
+This appendix provides a concrete listing of the source and destination registers for each instruction.
+These definitions are used to define syntactic dependencies in Section~\ref{sec:deps}.
+
+Instructions write (as opposed to accumulating into) each destination register, unless the destination register is annotated otherwise.
+
+\section{CSR Dependency Tracking Granularity}
+
+\begin{table}[h!]
+  \centering
+  \begin{tabular}{|l|l|l|}
+    \hline
+    Name & Portions Tracked as Independent Units & Aliases \\
+    \hline
+    {\tt fflags} & Bits 4, 3, 2, 1, 0 & {\tt fcsr}  \\
+    \hline
+    {\tt frm} & entire CSR & {\tt fcsr} \\
+    \hline
+    {\tt fcsr} & Bits 7-5, 4, 3, 2, 1, 0 & {\tt fflags}, {\tt frm} \\
+    \hline
+  \end{tabular}
+  \caption{Granularities at which syntactic dependencies are tracked through CSRs}
+\end{table}
+
+Note: read-only CSRs are not listed, as they do not participate in the definition of syntactic dependencies.
+
+\section{Source and Destination Registers}
+
+Key:
+
+$^A$Address source register
+
+$^D$Data source register
+
+$^C$The instruction accumulates into this destination register
+
+$^\dagger$The instruction does not carry a dependency from any source register to any destination register
+
+\begin{tabular}{p{25mm}|p{3cm}|p{6cm}|p{4cm}}
+  \multicolumn{4}{l}{\bf RV32I Base Instruction Set} \\
+  \cline{2-3}
+   & Source Registers & Destination Registers \\
+  \cline{2-3}
+   LUI &  & {\em rd} &  \\
+   \cline{2-3}
+   AUIPC &  & {\em rd} &  \\
+   \cline{2-3}
+   JAL$^\dagger$ &  & {\em rd} & \\
+   \cline{2-3}
+   JALR$^\dagger$ & {\em rs1} & {\em rd} & \\
+   \cline{2-3}
+   BEQ & {\em rs1}, {\em rs2} &  &  \\
+   \cline{2-3}
+   BNE & {\em rs1}, {\em rs2} &  &  \\
+   \cline{2-3}
+   BLT & {\em rs1}, {\em rs2} &  &  \\
+   \cline{2-3}
+   BGE & {\em rs1}, {\em rs2} &  &  \\
+   \cline{2-3}
+   BLTU & {\em rs1}, {\em rs2} &  &  \\
+   \cline{2-3}
+   BGEU & {\em rs1}, {\em rs2} &  &  \\
+   \cline{2-3}
+   LB$^\dagger$ & {\em rs1}$^A$ & {\em rd} &  \\
+   \cline{2-3}
+   LH$^\dagger$ & {\em rs1}$^A$ & {\em rd} &  \\
+   \cline{2-3}
+   LW$^\dagger$ & {\em rs1}$^A$ & {\em rd} &  \\
+   \cline{2-3}
+   LBU$^\dagger$ & {\em rs1}$^A$ & {\em rd} &  \\
+   \cline{2-3}
+   LHU$^\dagger$ & {\em rs1}$^A$ & {\em rd} &  \\
+   \cline{2-3}
+   SB$^\dagger$ & {\em rs1}$^D$, {\em rs2}$^A$ &  &  \\
+   \cline{2-3}
+   SH$^\dagger$ & {\em rs1}$^D$, {\em rs2}$^A$ &  &  \\
+   \cline{2-3}
+   SW$^\dagger$ & {\em rs1}$^D$, {\em rs2}$^A$ &  &  \\
+   \cline{2-3}
+   ADDI & {\em rs1} & {\em rd} &  \\
+   \cline{2-3}
+   SLTI & {\em rs1} & {\em rd} &  \\
+   \cline{2-3}
+   SLTIU & {\em rs1} & {\em rd} &  \\
+   \cline{2-3}
+   XORI & {\em rs1} & {\em rd} &  \\
+   \cline{2-3}
+   ORI & {\em rs1} & {\em rd} &  \\
+   \cline{2-3}
+   ANDI & {\em rs1} & {\em rd} &  \\
+   \cline{2-3}
+   SLLI & {\em rs1} & {\em rd} &  \\
+   \cline{2-3}
+   SRLI & {\em rs1} & {\em rd} &  \\
+   \cline{2-3}
+   SRAI & {\em rs1} & {\em rd} &  \\
+   \cline{2-3}
+   ADD & {\em rs1}, {\em rs2} & {\em rd} &  \\
+   \cline{2-3}
+   SUB & {\em rs1}, {\em rs2} & {\em rd} &  \\
+   \cline{2-3}
+   SLL & {\em rs1}, {\em rs2} & {\em rd} &  \\
+   \cline{2-3}
+   SLT & {\em rs1}, {\em rs2} & {\em rd} &  \\
+   \cline{2-3}
+   SLTU & {\em rs1}, {\em rs2} & {\em rd} &  \\
+   \cline{2-3}
+   XOR & {\em rs1}, {\em rs2} & {\em rd} &  \\
+   \cline{2-3}
+   SRL & {\em rs1}, {\em rs2} & {\em rd} &  \\
+   \cline{2-3}
+   SRA & {\em rs1}, {\em rs2} & {\em rd} &  \\
+   \cline{2-3}
+   OR & {\em rs1}, {\em rs2} & {\em rd} &  \\
+   \cline{2-3}
+   AND & {\em rs1}, {\em rs2} & {\em rd} &  \\
+   \cline{2-3}
+   FENCE &  &  &  \\
+   \cline{2-3}
+   FENCE.I &  &  &  \\
+   \cline{2-3}
+   ECALL &  &  &  \\
+   \cline{2-3}
+   EBREAK &  &  &  \\
+   \cline{2-3}
+\end{tabular}
+
+\begin{tabular}{p{25mm}|p{3cm}|p{6cm}|p{4cm}}
+  \multicolumn{4}{l}{\bf RV32I Base Instruction Set (continued)} \\
+  \cline{2-3}
+   & Source Registers & Destination Registers \\
+  \cline{2-3}
+   CSRRW & {\em rs1}, {\em csr}$^*$ & {\em rd}, {\em csr} & $^*$unless {\em {\em rd}}={\tt x0} \\
+   \cline{2-3}
+   CSRRS & {\em rs1}, {\em csr} & {\em rd}$^*$, {\em csr} & $^*$unless {\em {\em rs1}}={\tt x0} \\
+   \cline{2-3}
+   CSRRC & {\em rs1}, {\em csr} & {\em rd}$^*$, {\em csr} & $^*$unless {\em {\em rs1}}={\tt x0} \\
+   \cline{2-3}
+   CSRRWI & {\em csr}$^*$ & {\em rd}, {\em csr} & $^*$unless {\em {\em rd}}={\tt x0} \\
+   \cline{2-3}
+   CSRRSI & {\em csr} & {\em rd}, {\em csr}$^*$ & $^*$unless uimm[4:0]=0 \\
+   \cline{2-3}
+   CSRRCI & {\em csr} & {\em rd}, {\em csr}$^*$ & $^*$unless uimm[4:0]=0 \\
+   \cline{2-3}
+\end{tabular}
+
+\begin{tabular}{p{25mm}|p{3cm}|p{6cm}|p{10cm}}
+  \multicolumn{4}{l}{\bf RV64I Base Instruction Set (in addition to RV32I)} \\
+  \cline{2-3}
+   & Source Registers & Destination Registers \\
+  \cline{2-3}
+   LWU$^\dagger$ & {\em rs1}$^A$ & {\em rd} &  \\
+   \cline{2-3}
+   LD$^\dagger$ & {\em rs1}$^A$ & {\em rd} &  \\
+   \cline{2-3}
+   SD$^\dagger$ & {\em rs1}$^D$, {\em rs2}$^A$ &  &  \\
+   \cline{2-3}
+   SLLI & {\em rs1} & {\em rd} &  \\
+   \cline{2-3}
+   SRLI & {\em rs1} & {\em rd} &  \\
+   \cline{2-3}
+   SRAI & {\em rs1} & {\em rd} &  \\
+   \cline{2-3}
+   ADDIW & {\em rs1} & {\em rd} &  \\
+   \cline{2-3}
+   SLLIW & {\em rs1} & {\em rd} &  \\
+   \cline{2-3}
+   SRLIW & {\em rs1} & {\em rd} &  \\
+   \cline{2-3}
+   SRAIW & {\em rs1} & {\em rd} &  \\
+   \cline{2-3}
+   ADDW & {\em rs1}, {\em rs2} & {\em rd} &  \\
+   \cline{2-3}
+   SUBW & {\em rs1}, {\em rs2} & {\em rd} &  \\
+   \cline{2-3}
+   SLLW & {\em rs1}, {\em rs2} & {\em rd} &  \\
+   \cline{2-3}
+   SRLW & {\em rs1}, {\em rs2} & {\em rd} &  \\
+   \cline{2-3}
+   SRAW & {\em rs1}, {\em rs2} & {\em rd} &  \\
+   \cline{2-3}
+\end{tabular}
+
+\begin{tabular}{p{25mm}|p{3cm}|p{6cm}|p{10cm}}
+  \multicolumn{4}{l}{\bf RV32M Standa{\em rd} Extension} \\
+  \cline{2-3}
+   & Source Registers & Destination Registers \\
+  \cline{2-3}
+   MUL & {\em rs1}, {\em rs2} & {\em rd} &  \\
+   \cline{2-3}
+   MULH & {\em rs1}, {\em rs2} & {\em rd} &  \\
+   \cline{2-3}
+   MULHSU & {\em rs1}, {\em rs2} & {\em rd} &  \\
+   \cline{2-3}
+   MULHU & {\em rs1}, {\em rs2} & {\em rd} &  \\
+   \cline{2-3}
+   DIV & {\em rs1}, {\em rs2} & {\em rd} &  \\
+   \cline{2-3}
+   DIVU & {\em rs1}, {\em rs2} & {\em rd} &  \\
+   \cline{2-3}
+   REM & {\em rs1}, {\em rs2} & {\em rd} &  \\
+   \cline{2-3}
+   REMU & {\em rs1}, {\em rs2} & {\em rd} &  \\
+   \cline{2-3}
+\end{tabular}
+
+\begin{tabular}{p{25mm}|p{3cm}|p{6cm}|p{10cm}}
+  \multicolumn{4}{l}{\bf RV64M Standa{\em rd} Extension (in addition to RV32M)} \\
+  \cline{2-3}
+   & Source Registers & Destination Registers \\
+  \cline{2-3}
+   MULW & {\em rs1}, {\em rs2} & {\em rd} &  \\
+   \cline{2-3}
+   DIVW & {\em rs1}, {\em rs2} & {\em rd} &  \\
+   \cline{2-3}
+   DIVUW & {\em rs1}, {\em rs2} & {\em rd} &  \\
+   \cline{2-3}
+   REMW & {\em rs1}, {\em rs2} & {\em rd} &  \\
+   \cline{2-3}
+   REMUW & {\em rs1}, {\em rs2} & {\em rd} &  \\
+   \cline{2-3}
+\end{tabular}
+
+\begin{tabular}{p{25mm}|p{3cm}|p{6cm}|p{10cm}}
+  \multicolumn{4}{l}{\bf RV32A Standa{\em rd} Extension} \\
+  \cline{2-3}
+   & Source Registers & Destination Registers \\
+  \cline{2-3}
+   LR.W$^\dagger$ & {\em rs1}$^A$ & {\em rd} &  \\
+   \cline{2-3}
+   SC.W$^\dagger$ & {\em rs1}$^D$, {\em rs2}$^A$ & {\em rd}$^*$ & $^*$if successful \\
+   \cline{2-3}
+   AMOSWAP.W$^\dagger$ & {\em rs1}$^D$, {\em rs2}$^A$ & {\em rd} &  \\
+   \cline{2-3}
+   AMOADD.W$^\dagger$ & {\em rs1}$^D$, {\em rs2}$^A$ & {\em rd} &  \\
+   \cline{2-3}
+   AMOXOR.W$^\dagger$ & {\em rs1}$^D$, {\em rs2}$^A$ & {\em rd} &  \\
+   \cline{2-3}
+   AMOAND.W$^\dagger$ & {\em rs1}$^D$, {\em rs2}$^A$ & {\em rd} &  \\
+   \cline{2-3}
+   AMOOR.W$^\dagger$ & {\em rs1}$^D$, {\em rs2}$^A$ & {\em rd} &  \\
+   \cline{2-3}
+   AMOMIN.W$^\dagger$ & {\em rs1}$^D$, {\em rs2}$^A$ & {\em rd} &  \\
+   \cline{2-3}
+   AMOMAX.W$^\dagger$ & {\em rs1}$^D$, {\em rs2}$^A$ & {\em rd} &  \\
+   \cline{2-3}
+   AMOMINU.W$^\dagger$ & {\em rs1}$^D$, {\em rs2}$^A$ & {\em rd} &  \\
+   \cline{2-3}
+   AMOMAXU.W$^\dagger$ & {\em rs1}$^D$, {\em rs2}$^A$ & {\em rd} &  \\
+   \cline{2-3}
+\end{tabular}
+
+\begin{tabular}{p{25mm}|p{3cm}|p{6cm}|p{10cm}}
+  \multicolumn{4}{l}{\bf RV64A Standa{\em rd} Extension (in addition to RV32A)} \\
+  \cline{2-3}
+   & Source Registers & Destination Registers \\
+  \cline{2-3}
+   LR.D$^\dagger$ & {\em rs1}$^A$ & {\em rd} &  \\
+   \cline{2-3}
+   SC.D$^\dagger$ & {\em rs1}$^D$, {\em rs2}$^A$ & {\em rd}$^*$ & $^*$if successful \\
+   \cline{2-3}
+   AMOSWAP.D$^\dagger$ & {\em rs1}$^D$, {\em rs2}$^A$ & {\em rd} &  \\
+   \cline{2-3}
+   AMOADD.D$^\dagger$ & {\em rs1}$^D$, {\em rs2}$^A$ & {\em rd} &  \\
+   \cline{2-3}
+   AMOXOR.D$^\dagger$ & {\em rs1}$^D$, {\em rs2}$^A$ & {\em rd} &  \\
+   \cline{2-3}
+   AMOAND.D$^\dagger$ & {\em rs1}$^D$, {\em rs2}$^A$ & {\em rd} &  \\
+   \cline{2-3}
+   AMOOR.D$^\dagger$ & {\em rs1}$^D$, {\em rs2}$^A$ & {\em rd} &  \\
+   \cline{2-3}
+   AMOMIN.D$^\dagger$ & {\em rs1}$^D$, {\em rs2}$^A$ & {\em rd} &  \\
+   \cline{2-3}
+   AMOMAX.D$^\dagger$ & {\em rs1}$^D$, {\em rs2}$^A$ & {\em rd} &  \\
+   \cline{2-3}
+   AMOMINU.D$^\dagger$ & {\em rs1}$^D$, {\em rs2}$^A$ & {\em rd} &  \\
+   \cline{2-3}
+   AMOMAXU.D$^\dagger$ & {\em rs1}$^D$, {\em rs2}$^A$ & {\em rd} &  \\
+   \cline{2-3}
+\end{tabular}
+
+\begin{tabular}{p{25mm}|p{3cm}|p{6cm}|p{10cm}}
+  \multicolumn{4}{l}{\bf RV32F Standa{\em rd} Extension} \\
+  \cline{2-3}
+   & Source Registers & Destination Registers \\
+  \cline{2-3}
+   FLW$^\dagger$ & {\em rs1} & {\em rd} &  \\
+   \cline{2-3}
+   FSW$^\dagger$ & {\em rs1}, {\em rs2} &  &  \\
+   \cline{2-3}
+   FMADD.S & {\em rs1}, {\em rs2}, frm$^*$ & {\em rd}, NV$^C$, OF$^C$, UF$^C$, NX$^C$ & $^*$if rm=111 \\
+   \cline{2-3}
+   FMSUB.S & {\em rs1}, {\em rs2}, frm$^*$ & {\em rd}, NV$^C$, OF$^C$, UF$^C$, NX$^C$ & $^*$if rm=111 \\
+   \cline{2-3}
+   FNMSUB.S & {\em rs1}, {\em rs2}, frm$^*$ & {\em rd}, NV$^C$, OF$^C$, UF$^C$, NX$^C$ & $^*$if rm=111 \\
+   \cline{2-3}
+   FNMADD.S & {\em rs1}, {\em rs2}, frm$^*$ & {\em rd}, NV$^C$, OF$^C$, UF$^C$, NX$^C$ & $^*$if rm=111 \\
+   \cline{2-3}
+   FADD.S & {\em rs1}, {\em rs2}, frm$^*$ & {\em rd}, NV$^C$, OF$^C$, UF$^C$, NX$^C$ & $^*$if rm=111 \\
+   \cline{2-3}
+   FSUB.S & {\em rs1}, {\em rs2}, frm$^*$ & {\em rd}, NV$^C$, OF$^C$, UF$^C$, NX$^C$ & $^*$if rm=111 \\
+   \cline{2-3}
+   FMUL.S & {\em rs1}, {\em rs2}, frm$^*$ & {\em rd}, NV$^C$, OF$^C$, UF$^C$, NX$^C$ & $^*$if rm=111 \\
+   \cline{2-3}
+   FDIV.S & {\em rs1}, {\em rs2}, frm$^*$ & {\em rd}, NV$^C$, DZ$^C$, OF$^C$, UF$^C$, NX$^C$ & $^*$if rm=111 \\
+   \cline{2-3}
+   FSQRT.S & {\em rs1}, frm$^*$ & {\em rd}, NV$^C$, DZ$^C$, OF$^C$, UF$^C$, NX$^C$ & $^*$if rm=111 \\
+   \cline{2-3}
+   FSGNJ.S & {\em rs1}, {\em rs2} & {\em rd} &  \\
+   \cline{2-3}
+   FSGNJN.S & {\em rs1}, {\em rs2} & {\em rd} &  \\
+   \cline{2-3}
+   FSGNJX.S & {\em rs1}, {\em rs2} & {\em rd} &  \\
+   \cline{2-3}
+   FMIN.S & {\em rs1}, {\em rs2} & {\em rd}, NV$^C$, OF$^C$, UF$^C$, NX$^C$ &  \\
+   \cline{2-3}
+   FMAX.S & {\em rs1}, {\em rs2} & {\em rd}, NV$^C$, OF$^C$, UF$^C$, NX$^C$ &  \\
+   \cline{2-3}
+   FCVT.W.S & {\em rs1}, frm$^*$ & {\em rd}, NV$^C$ & $^*$if rm=111 \\
+   \cline{2-3}
+   FCVT.WU.S & {\em rs1}, frm$^*$ & {\em rd}, NV$^C$ & $^*$if rm=111 \\
+   \cline{2-3}
+   FMV.X.W & {\em rs1} & {\em rd} &  \\
+   \cline{2-3}
+   FEQ.S & {\em rs1}, {\em rs2} & {\em rd}, NV$^C$ &  \\
+   \cline{2-3}
+   FLT.S & {\em rs1}, {\em rs2} & {\em rd}, NV$^C$ &  \\
+   \cline{2-3}
+   FLE.S & {\em rs1}, {\em rs2} & {\em rd}, NV$^C$ &  \\
+   \cline{2-3}
+   FCLASS.S & {\em rs1} & {\em rd} &  \\
+   \cline{2-3}
+   FCVT.S.W & {\em rs1}, frm$^*$ & {\em rd}, NV$^C$ & $^*$if rm=111 \\
+   \cline{2-3}
+   FCVT.S.WU & {\em rs1}, frm$^*$ & {\em rd}, NV$^C$ & $^*$if rm=111 \\
+   \cline{2-3}
+   FMV.W.X & {\em rs1} & {\em rd} &  \\
+   \cline{2-3}
+\end{tabular}
+
+\begin{tabular}{p{25mm}|p{3cm}|p{6cm}|p{10cm}}
+  \multicolumn{4}{l}{\bf RV64F Standa{\em rd} Extension (in addition to RV32F)} \\
+  \cline{2-3}
+   & Source Registers & Destination Registers \\
+  \cline{2-3}
+   FCVT.L.S & {\em rs1} & {\em rd}, NV$^C$ &  \\
+   \cline{2-3}
+   FCVT.LU.S & {\em rs1} & {\em rd}, NV$^C$ &  \\
+   \cline{2-3}
+   FCVT.S.L & {\em rs1} & {\em rd}, NV$^C$ &  \\
+   \cline{2-3}
+   FCVT.S.LU & {\em rs1} & {\em rd}, NV$^C$ &  \\
+   \cline{2-3}
+\end{tabular}
+
+\begin{tabular}{p{25mm}|p{3cm}|p{6cm}|p{10cm}}
+  \multicolumn{4}{l}{\bf RV32D Standa{\em rd} Extension} \\
+  \cline{2-3}
+   & Source Registers & Destination Registers \\
+  \cline{2-3}
+   FLD$^\dagger$ & {\em rs1} & {\em rd} &  \\
+   \cline{2-3}
+   FSD$^\dagger$ & {\em rs1}, {\em rs2} &  &  \\
+   \cline{2-3}
+   FMADD.D & {\em rs1}, {\em rs2}, frm$^*$ & {\em rd}, NV$^C$, OF$^C$, UF$^C$, NX$^C$ & $^*$if rm=111 \\
+   \cline{2-3}
+   FMSUB.D & {\em rs1}, {\em rs2}, frm$^*$ & {\em rd}, NV$^C$, OF$^C$, UF$^C$, NX$^C$ & $^*$if rm=111 \\
+   \cline{2-3}
+   FNMSUB.D & {\em rs1}, {\em rs2}, frm$^*$ & {\em rd}, NV$^C$, OF$^C$, UF$^C$, NX$^C$ & $^*$if rm=111 \\
+   \cline{2-3}
+   FNMADD.D & {\em rs1}, {\em rs2}, frm$^*$ & {\em rd}, NV$^C$, OF$^C$, UF$^C$, NX$^C$ & $^*$if rm=111 \\
+   \cline{2-3}
+   FADD.D & {\em rs1}, {\em rs2}, frm$^*$ & {\em rd}, NV$^C$, OF$^C$, UF$^C$, NX$^C$ & $^*$if rm=111 \\
+   \cline{2-3}
+   FSUB.D & {\em rs1}, {\em rs2}, frm$^*$ & {\em rd}, NV$^C$, OF$^C$, UF$^C$, NX$^C$ & $^*$if rm=111 \\
+   \cline{2-3}
+   FMUL.D & {\em rs1}, {\em rs2}, frm$^*$ & {\em rd}, NV$^C$, OF$^C$, UF$^C$, NX$^C$ & $^*$if rm=111 \\
+   \cline{2-3}
+   FDIV.D & {\em rs1}, {\em rs2}, frm$^*$ & {\em rd}, NV$^C$, DZ$^C$, OF$^C$, UF$^C$, NX$^C$ & $^*$if rm=111 \\
+   \cline{2-3}
+   FSQRT.D & {\em rs1}, frm$^*$ & {\em rd}, NV$^C$, DZ$^C$, OF$^C$, UF$^C$, NX$^C$ & $^*$if rm=111 \\
+   \cline{2-3}
+   FSGNJ.D & {\em rs1}, {\em rs2} & {\em rd} &  \\
+   \cline{2-3}
+   FSGNJN.D & {\em rs1}, {\em rs2} & {\em rd} &  \\
+   \cline{2-3}
+   FSGNJX.D & {\em rs1}, {\em rs2} & {\em rd} &  \\
+   \cline{2-3}
+   FMIN.D & {\em rs1}, {\em rs2} & {\em rd}, NV$^C$, OF$^C$, UF$^C$, NX$^C$ &  \\
+   \cline{2-3}
+   FMAX.D & {\em rs1}, {\em rs2} & {\em rd}, NV$^C$, OF$^C$, UF$^C$, NX$^C$ &  \\
+   \cline{2-3}
+   FCVT.S.D & {\em rs1}, frm$^*$ & {\em rd}, NV$^C$ & $^*$if rm=111 \\
+   \cline{2-3}
+   FCVT.D.S & {\em rs1}, frm$^*$ & {\em rd}, NV$^C$ & $^*$if rm=111 \\
+   \cline{2-3}
+   FEQ.D & {\em rs1}, {\em rs2} & {\em rd}, NV$^C$ &  \\
+   \cline{2-3}
+   FLT.D & {\em rs1}, {\em rs2} & {\em rd}, NV$^C$ &  \\
+   \cline{2-3}
+   FLE.D & {\em rs1}, {\em rs2} & {\em rd}, NV$^C$ &  \\
+   \cline{2-3}
+   FCLASS.D & {\em rs1} & {\em rd} &  \\
+   \cline{2-3}
+   FCVT.W.D & {\em rs1}, frm$^*$ & {\em rd}, NV$^C$ & $^*$if rm=111 \\
+   \cline{2-3}
+   FCVT.WU.D & {\em rs1}, frm$^*$ & {\em rd}, NV$^C$ & $^*$if rm=111 \\
+   \cline{2-3}
+   FCVT.D.W & {\em rs1}, frm$^*$ & {\em rd}, NV$^C$ & $^*$if rm=111 \\
+   \cline{2-3}
+   FCVT.D.WU & {\em rs1}, frm$^*$ & {\em rd}, NV$^C$ & $^*$if rm=111 \\
+   \cline{2-3}
+\end{tabular}
+
+\begin{tabular}{p{25mm}|p{3cm}|p{6cm}|p{10cm}}
+  \multicolumn{4}{l}{\bf RV64D Standa{\em rd} Extension (in addition to RV32D)} \\
+  \cline{2-3}
+   & Source Registers & Destination Registers \\
+  \cline{2-3}
+   FCVT.L.D & {\em rs1}, frm$^*$ & {\em rd}, NV$^C$ & $^*$if rm=111 \\
+   \cline{2-3}
+   FCVT.LU.D & {\em rs1}, frm$^*$ & {\em rd}, NV$^C$ & $^*$if rm=111 \\
+   \cline{2-3}
+   FMV.X.D & {\em rs1} & {\em rd} &  \\
+   \cline{2-3}
+   FCVT.D.L & {\em rs1}, frm$^*$ & {\em rd}, NV$^C$ & $^*$if rm=111 \\
+   \cline{2-3}
+   FCVT.D.LU & {\em rs1}, frm$^*$ & {\em rd}, NV$^C$ & $^*$if rm=111 \\
+   \cline{2-3}
+   FMV.D.X & {\em rs1} & {\em rd} &  \\
+   \cline{2-3}
+\end{tabular}
