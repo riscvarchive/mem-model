@@ -3,7 +3,7 @@
 This appendix provides a concrete listing of the source and destination registers for each instruction.
 These definitions are used to define syntactic dependencies in Section~\ref{sec:deps}.
 
-Instructions write (as opposed to accumulating into) each destination register, unless the destination register is annotated otherwise.
+Instructions write (as opposed to accumulating into) each destination register and carry a dependency from each source register to each destination register unless annotated otherwise.
 
 \section{CSR Dependency Tracking Granularity}
 
@@ -36,6 +36,8 @@ $^D$Data source register
 $^C$The instruction accumulates into this destination register
 
 $^\dagger$The instruction does not carry a dependency from any source register to any destination register
+
+$^\ddagger$The instruction carries dependencies from source register(s) to destination register(s) as specified
 
 \begin{tabular}{p{25mm}|p{3cm}|p{6cm}|p{4cm}}
   \multicolumn{4}{l}{\bf RV32I Base Instruction Set} \\
@@ -131,18 +133,24 @@ $^\dagger$The instruction does not carry a dependency from any source register t
   \cline{2-3}
    & Source Registers & Destination Registers \\
   \cline{2-3}
-   CSRRW & {\em rs1}, {\em csr}$^*$ & {\em rd}, {\em csr} & $^*$unless {\em {\em rd}}={\tt x0} \\
+   CSRRW$^\ddagger$ & {\em rs1}, {\em csr}$^*$ & {\em rd}, {\em csr} & $^*$unless {\em rd}={\tt x0} \\
    \cline{2-3}
-   CSRRS & {\em rs1}, {\em csr} & {\em rd}$^*$, {\em csr} & $^*$unless {\em {\em rs1}}={\tt x0} \\
+   CSRRS$^\ddagger$ & {\em rs1}, {\em csr} & {\em rd}$^*$, {\em csr} & $^*$unless {\em rs1}={\tt x0} \\
    \cline{2-3}
-   CSRRC & {\em rs1}, {\em csr} & {\em rd}$^*$, {\em csr} & $^*$unless {\em {\em rs1}}={\tt x0} \\
+   CSRRC$^\ddagger$ & {\em rs1}, {\em csr} & {\em rd}$^*$, {\em csr} & $^*$unless {\em rs1}={\tt x0} \\
    \cline{2-3}
-   CSRRWI & {\em csr}$^*$ & {\em rd}, {\em csr} & $^*$unless {\em {\em rd}}={\tt x0} \\
+   \multicolumn{1}{c}{} & \multicolumn{3}{l}{$\ddagger$carries a dependency from {\em rs1} to {\em csr} and from {\em csr} to {\em rd}}
+\end{tabular}
+\begin{tabular}{p{25mm}|p{3cm}|p{6cm}|p{4cm}}
+  \multicolumn{4}{l}{\bf RV32I Base Instruction Set (continued)} \\
    \cline{2-3}
-   CSRRSI & {\em csr} & {\em rd}, {\em csr}$^*$ & $^*$unless uimm[4:0]=0 \\
+   CSRRWI$^\ddagger$ & {\em csr}$^*$ & {\em rd}, {\em csr} & $^*$unless {\em rd}={\tt x0} \\
    \cline{2-3}
-   CSRRCI & {\em csr} & {\em rd}, {\em csr}$^*$ & $^*$unless uimm[4:0]=0 \\
+   CSRRSI$^\ddagger$ & {\em csr} & {\em rd}, {\em csr}$^*$ & $^*$unless uimm[4:0]=0 \\
    \cline{2-3}
+   CSRRCI$^\ddagger$ & {\em csr} & {\em rd}, {\em csr}$^*$ & $^*$unless uimm[4:0]=0 \\
+   \cline{2-3}
+   \multicolumn{1}{c}{} & \multicolumn{3}{l}{$\ddagger$carries a dependency from {\em csr} to {\em rd}}
 \end{tabular}
 
 \begin{tabular}{p{25mm}|p{3cm}|p{6cm}|p{10cm}}
@@ -183,7 +191,7 @@ $^\dagger$The instruction does not carry a dependency from any source register t
 \end{tabular}
 
 \begin{tabular}{p{25mm}|p{3cm}|p{6cm}|p{10cm}}
-  \multicolumn{4}{l}{\bf RV32M Standa{\em rd} Extension} \\
+  \multicolumn{4}{l}{\bf RV32M Standard Extension} \\
   \cline{2-3}
    & Source Registers & Destination Registers \\
   \cline{2-3}
@@ -206,7 +214,7 @@ $^\dagger$The instruction does not carry a dependency from any source register t
 \end{tabular}
 
 \begin{tabular}{p{25mm}|p{3cm}|p{6cm}|p{10cm}}
-  \multicolumn{4}{l}{\bf RV64M Standa{\em rd} Extension (in addition to RV32M)} \\
+  \multicolumn{4}{l}{\bf RV64M Standard Extension (in addition to RV32M)} \\
   \cline{2-3}
    & Source Registers & Destination Registers \\
   \cline{2-3}
@@ -223,7 +231,7 @@ $^\dagger$The instruction does not carry a dependency from any source register t
 \end{tabular}
 
 \begin{tabular}{p{25mm}|p{3cm}|p{6cm}|p{10cm}}
-  \multicolumn{4}{l}{\bf RV32A Standa{\em rd} Extension} \\
+  \multicolumn{4}{l}{\bf RV32A Standard Extension} \\
   \cline{2-3}
    & Source Registers & Destination Registers \\
   \cline{2-3}
@@ -252,7 +260,7 @@ $^\dagger$The instruction does not carry a dependency from any source register t
 \end{tabular}
 
 \begin{tabular}{p{25mm}|p{3cm}|p{6cm}|p{10cm}}
-  \multicolumn{4}{l}{\bf RV64A Standa{\em rd} Extension (in addition to RV32A)} \\
+  \multicolumn{4}{l}{\bf RV64A Standard Extension (in addition to RV32A)} \\
   \cline{2-3}
    & Source Registers & Destination Registers \\
   \cline{2-3}
@@ -281,7 +289,7 @@ $^\dagger$The instruction does not carry a dependency from any source register t
 \end{tabular}
 
 \begin{tabular}{p{25mm}|p{3cm}|p{6cm}|p{10cm}}
-  \multicolumn{4}{l}{\bf RV32F Standa{\em rd} Extension} \\
+  \multicolumn{4}{l}{\bf RV32F Standard Extension} \\
   \cline{2-3}
    & Source Registers & Destination Registers \\
   \cline{2-3}
@@ -340,7 +348,7 @@ $^\dagger$The instruction does not carry a dependency from any source register t
 \end{tabular}
 
 \begin{tabular}{p{25mm}|p{3cm}|p{6cm}|p{10cm}}
-  \multicolumn{4}{l}{\bf RV64F Standa{\em rd} Extension (in addition to RV32F)} \\
+  \multicolumn{4}{l}{\bf RV64F Standard Extension (in addition to RV32F)} \\
   \cline{2-3}
    & Source Registers & Destination Registers \\
   \cline{2-3}
@@ -355,7 +363,7 @@ $^\dagger$The instruction does not carry a dependency from any source register t
 \end{tabular}
 
 \begin{tabular}{p{25mm}|p{3cm}|p{6cm}|p{10cm}}
-  \multicolumn{4}{l}{\bf RV32D Standa{\em rd} Extension} \\
+  \multicolumn{4}{l}{\bf RV32D Standard Extension} \\
   \cline{2-3}
    & Source Registers & Destination Registers \\
   \cline{2-3}
@@ -414,7 +422,7 @@ $^\dagger$The instruction does not carry a dependency from any source register t
 \end{tabular}
 
 \begin{tabular}{p{25mm}|p{3cm}|p{6cm}|p{10cm}}
-  \multicolumn{4}{l}{\bf RV64D Standa{\em rd} Extension (in addition to RV32D)} \\
+  \multicolumn{4}{l}{\bf RV64D Standard Extension (in addition to RV32D)} \\
   \cline{2-3}
    & Source Registers & Destination Registers \\
   \cline{2-3}

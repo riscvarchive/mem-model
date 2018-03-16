@@ -36,36 +36,36 @@ These are intended to clarify the meaning and intent of the axioms and preserved
 \label{sec:whynottso}
 
 Memory consistency models fall along a loose spectrum from weak to strong.
-Weak memory models (e.g., ARMv7, Power, Alpha) allow more hardware implementation flexibility and deliver arguably better performance, performance per watt, power, scalability, and hardware verification overheads than strong models, at the expense of a more complex programming model.
+Weak memory models allow more hardware implementation flexibility and deliver arguably better performance, performance per watt, power, scalability, and hardware verification overheads than strong models, at the expense of a more complex programming model.
 %Models which are too weak may not even be properly analyzable with modern formal analysis techniques.
-Strong models (e.g., sequential consistency, TSO) provide simpler programming models, but at the cost of imposing more restrictions on the kinds of hardware optimizations that can be performed in the pipeline and in the memory system, with some cost to power and area overheads, and with some added hardware verification burden.
+Strong models provide simpler programming models, but at the cost of imposing more restrictions on the kinds of (non-speculative) hardware optimizations that can be performed in the pipeline and in the memory system, and in turn imposing some cost in terms of power, area overhead, and verification burden.
 
-For the base ISA, RISC-V has chosen the RVWMO memory model, which is a variant of release consistency.
+RISC-V has chosen the RVWMO memory model, which is a variant of release consistency.
 This places it in between the two extremes of the memory model spectrum.
-It is not as weak as the Power memory model, and this buys back some programming model simplicity without giving up very much in terms of performance.
-RVWMO is also not as restrictive as RVTSO, and hence it remains weak enough to ensure that implementations can be performant and scalable without incurring huge hardware complexity overheads.
-RVWMO is similar to the ARMv8 memory model in this regard.
+%It is not as weak as the Power memory model, and this buys back some programming model simplicity without giving up very much in terms of performance.
+%RVWMO is also not as restrictive as RVTSO, and hence it remains weak enough to ensure that implementations can be performant and scalable without incurring huge hardware complexity overheads.
+%RVWMO is similar to the ARMv8 memory model in this regard.
+The RVWMO memory model enables architects to build simple implementations, aggressive implementations, implementations embedded deeply inside a much larger system and subject to complex memory system interactions, or any number of other possibilities, all while simultaneously being strong enough to support programming language memory models at high performance.
 
-As such, the RVWMO memory model enables architects to build simple implementations, aggressive implementations, implementations embedded deeply inside a much larger system and subject to complex memory system interactions, or any number of other possibilities, all while simultaneously being strong enough to support programming language memory models at high performance.
+%The risk of a weak memory model lies in the complexity of the programming model.
+%Buggy code which ``just worked'' on stronger implementations may well break on more aggressive implementations due to the bugs simply not manifesting on the stronger-than-necessary implementations.
+%For these situations, though, the root cause is the bug in the original software, not the memory model itself.
+%The risk of finding short-term bugs in code ported from other architectures is outweighed by the long-term benefits that the weak memory model delivers more generally.
 
-The risk of a weak memory model lies in the complexity of the programming model.
-Buggy code which ``just worked'' on stronger implementations may well break on more aggressive implementations due to the bugs simply not manifesting on the stronger-than-necessary implementations.
-For these situations, though, the root cause is the bug in the original software, not the memory model itself.
-The risk of finding short-term bugs in code ported from other architectures is outweighed by the long-term benefits that the weak memory model delivers more generally.
-
-To mitigate this risk, some hardware implementations may choose to stick with RVTSO, and that is perfectly acceptable and perfectly compatible with the RVWMO memory model.
-The cost that the weak memory model imposes on such implementations is the incremental overhead of fetching instructions (e.g., {\tt fence~r,rw} and {\tt fence rw,w}) which become no-ops on that implementation.
-(These fences must remain present in the code to ensure compatibility with other more weakly-ordered RISC-V implementations.)
-
-Most software is also fully compatible with weak memory models.
-C/C++, Java, and Linux, to name some of the most notable and more formally analyzed examples, are all entirely compatible with weak non-atomic memory models, as all are designed to run not just on x86 but also on ARM, Power, and many other architectures.
-It is true that some code, e.g., code ported from x86, does sometimes (correctly or incorrectly) assume a stronger model such as TSO.
-For such code, the RVWMO memory model provides a means for restoring TSO to sections of code through fences and atomics with {\tt .aq} and {\tt .rl} bits in the ``A'' extension, until such code can be ported to RVWMO over time.
-
-Designers who wish to provide drop-in compatibility with x86 code can also implement the Ztso extension which enforces RVTSO.
+To facilitate the porting of code from other architectures, some hardware implementations may choose to implement the Ztso extension, which provides stricter RVTSO ordering semantics by default.
 Code written for RVWMO is automatically and inherently compatible with RVTSO, but code written assuming RVTSO is not guaranteed to run correctly on RVWMO implementations.
-In fact, RVWMO implementations will (and should) simply refuse to run TSO-only binaries.
+In fact, most RVWMO implementations will (and should) simply refuse to run RVTSO-only binaries.
 Each implementation must therefore choose whether to prioritize compatibility with RVTSO code (e.g., to facilitate porting from x86) or whether to instead prioritize compatibility with other RISC-V cores implementing RVWMO.
+
+Some fences and/or memory ordering annotations in code written for RVWMO may become redundant under RVTSO; the cost that the default of RVWMO imposes on Ztso implementations is the incremental overhead of fetching those fences (e.g., {\tt fence~r,rw} and {\tt fence rw,w}) which become no-ops on that implementation.
+However, these fences must remain present in the code to ensure compatibility with non-Ztso implementations.
+
+%Most software is also fully compatible with weak memory models.
+%C/C++, Java, and Linux, to name some of the most notable and more formally analyzed examples, are all entirely compatible with weak non-atomic memory models, as all are designed to run not just on x86 but also on ARM, Power, and many other architectures.
+%It is true that some code, e.g., code ported from x86, does sometimes (correctly or incorrectly) assume a stronger model such as TSO.
+%For such code, the RVWMO memory model provides a means for restoring TSO to sections of code through fences and atomics with {\tt .aq} and {\tt .rl} bits in the ``A'' extension, until such code can be ported to RVWMO over time.
+
+%dDesigners who wish to provide drop-in compatibility with x86 code can also implement the Ztso extension which enforces RVTSO.
 
 \section{Litmus Tests}
 The explanations in this chapter make use of {\em litmus tests}, or small programs designed to test or highlight one particular aspect of a memory model.
@@ -82,15 +82,15 @@ This figure shows the same program twice: on the left in RISC-V assembly, and ag
     \multicolumn{2}{c}{Hart 0} & \multicolumn{2}{c}{Hart 1} \\
     \hline
           & $\vdots$    &     & $\vdots$    \\
-          & li t1, 1    &     & li t4, 4    \\
+          & li t1,1     &     & li t4,4     \\
       (a) & sw t1,0(s0) & (e) & sw t4,0(s0) \\
           & $\vdots$    &     & $\vdots$    \\
-          & li t2, 2    &     &             \\
+          & li t2,2     &     &             \\
       (b) & sw t2,0(s0) &     &             \\
           & $\vdots$    &     & $\vdots$    \\
       (c) & lw a0,0(s0) &     &             \\
           & $\vdots$    &     & $\vdots$    \\
-          & li t3, 3    &     & li t5, 5    \\
+          & li t3,3     &     & li t5,5     \\
       (d) & sw t3,0(s0) & (f) & sw t5,0(s0) \\
           & $\vdots$    &     & $\vdots$    \\
     \end{tabular}
@@ -103,7 +103,7 @@ This figure shows the same program twice: on the left in RISC-V assembly, and ag
 
 Litmus tests are used to understand the implications of the memory model in specific concrete situations.
 For example, in the litmus test of Figure~\ref{fig:litmus:sample}, the final value of {\tt a0} in the first hart can be either 2, 4, or 5, depending on the dynamic interleaving of the instruction stream from each hart at runtime.
-However, in this example, the final value of {\tt a0} in Hart 0 will never be 1 or 3: the value 1 will no longer be visible at the time the load executes, and the value 3 will not yet be visible by the time the load executes.
+However, in this example, the final value of {\tt a0} in Hart 0 will never be 1 or 3; intuitively, the value 1 will no longer be visible at the time the load executes, and the value 3 will not yet be visible by the time the load executes.
 
 We analyze this test and many others below.
 
@@ -122,7 +122,8 @@ In this sense, the global memory order also represents the contribution of the c
 
 The order in which loads perform does not always directly correspond to the relative age of the values those two loads return.
 In particular, a load $b$ may perform before another load $a$ to the same address (i.e., $b$ may execute before $a$, and $b$ may appear before $a$ in the global memory order), but $a$ may nevertheless return an older value than $b$.
-This discrepancy captures the reordering effects of store buffers placed between the core and memory: a younger load may read from a value in the store buffer, while an older load which appears before that store in program order may ignore that younger store and read an older value from memory instead.
+This discrepancy captures (among other things) the reordering effects of buffering placed between the core and memory.
+For example, a younger load may read from a value in the store buffer, while an older load which appears before that store in program order may ignore that younger store and read an older value from memory instead.
 To account for this, at the time each load performs, the value it returns is determined by the load value axiom, not just strictly by determining the most recent store to the same address in the global memory order, as described below.
 
 \subsection{Store Buffering (Load Value Axiom)}
@@ -199,7 +200,7 @@ Rule \ref{ppo:->st}: \ppost
 
 Same-address orderings where the latter is a store are straightforward: a load or store can never be reordered with a later store to an overlapping memory location.  From a microarchitecture perspective, generally speaking, it is difficult or impossible to undo a speculatively reordered store if the speculation turns out to be invalid, so such behavior is simply disallowed by the model.
 
-Same-address load-load orderings are far more subtle; see Chapter~\ref{sec:ppo:rdw}.
+Same-address load-load orderings are far more subtle; see Section~\ref{sec:ppo:rdw}.
 
 \begin{comment}
 The formal model captures this as follows:
@@ -209,7 +210,7 @@ The formal model captures this as follows:
 \end{itemize}
 \end{comment}
 
-\subsection{Fences (Rule~\ref{ppo:fence})}
+\subsection{Fences (Rule~\ref{ppo:fence})}\label{sec:mm:fence}
 \begin{tabular}{p{1cm}|p{12cm}} &
 Rule \ref{ppo:fence}: \ppofence
 \end{tabular}
@@ -220,7 +221,7 @@ Specifically, fences have {\tt .pr}, {\tt .pw}, {\tt .sr}, and {\tt .sw} bits wh
 The predecessor set includes loads (resp.\@ stores) if and only if {\tt .pr} (resp.\@ {\tt .pw}) is set.
 Similarly, the successor set includes loads (resp.\@ stores) if and only if {\tt .sr} (resp.\@ {\tt .sw}) is set.
 
-The full RISC-V opcode encoding currently has nine non-trivial combinations of the four bits {\tt pr}, {\tt pw}, {\tt sr}, and {\tt sw}, plus one extra encoding which is expected to be added to facilitate mapping of ``acquire+release'' or TSO semantics.
+The full RISC-V opcode encoding currently has nine non-trivial combinations of the four bits {\tt pr}, {\tt pw}, {\tt sr}, and {\tt sw}, plus one extra encoding ``{\tt fence.tso}'' which is expected to be added to facilitate mapping of ``acquire+release'' or RVTSO semantics.
 The remaining seven combinations have empty predecessor and/or successor sets and hence are no-ops.
 Of the ten non-trivial options, only six are commonly used in practice:
 {\tt
@@ -233,18 +234,15 @@ Of the ten non-trivial options, only six are commonly used in practice:
   \item fence w,w
 \end{itemize}
 }
-We strongly recommend that programmers stick to these six, as these are the best understood.  {\tt fence} instructions using any other combination of {\tt .pr}, {\tt .pw}, {\tt .sr}, and {\tt .sw} are reserved.
+{\tt fence} instructions using any other combination of {\tt .pr}, {\tt .pw}, {\tt .sr}, and {\tt .sw} are reserved.  We strongly recommend that programmers stick to these six, as these are the best understood.
 
 Finally, we note that since RISC-V uses a multi-copy atomic memory model, programmers can reason about fences and the {\tt .aq} and {\tt .rl} bits in a thread-local manner.  There is no complex notion of ``fence cumulativity'' as found in memory models which are not multi-copy atomic.
 
-\subsection{Acquire/Release Ordering (Rules~\ref{ppo:acquire}--\ref{ppo:amoload})}\label{sec:acqrel}
+\subsection{Acquire/Release Ordering (Rules~\ref{ppo:acquire}--\ref{ppo:strongacqrel})}\label{sec:acqrel}
 \begin{tabular}{p{1cm}|p{12cm}}
   & Rule \ref{ppo:acquire}: \ppoacquire \\
-  %& Rule \ref{ppo:loadtoacq}: \ppoloadtoacq \\
   & Rule \ref{ppo:release}: \pporelease \\
   & Rule \ref{ppo:strongacqrel}: \ppostrongacqrel \\
-  & Rule \ref{ppo:amostore}: \ppoamostore \\
-  & Rule \ref{ppo:amoload}: \ppoamoload \\
 \end{tabular}
 
 An {\em acquire} operation is used at the start of a critical section.  The general requirement for acquire semantics is that all loads and stores inside the critical section are up to date with respect to the synchronization variable being used to protect it.  In other words, an acquire operation requires load-to-load/store ordering.
@@ -300,61 +298,47 @@ In this case, even though the {\tt amoswap} does not enforce ordering with an {\
 Note, however, that in this case, the fence also enforces additional orderings: it also requires that the ``random unrelated load'' at the start of the program appears also appears earlier in the global memory order than the loads and stores of the critical section.  (This particular fence does not, however, enforce any ordering with respect to the ``random unrelated store'' at the start of the snippet.)
 In this way, fence-enforced orderings are slightly coarser than orderings enforced by {\tt.aq}.
 
-\begin{comment}
-A load-acquire also appears later in the global memory order than any previous paired loads to overlapping addresses.
-This rule is in place primarily to ensure compatibility with C/C++ release sequences.
-Consider the example of Figure~\ref{fig:relseq}:
-
-\begin{figure}[h!]
-  \centering
-  {\tt\small
-    \begin{tabular}{cl||cl}
-    \multicolumn{2}{c}{Thread 0} & \multicolumn{2}{c}{Thread 1} \\
-    \hline
-      (a)  & x = 1;                     & (d) & atomic\_exchange(y, 2, memory\_order\_relaxed); \\
-      (bc) & atomic\_store(y, 1,        & (e) & atomic\_exchange(y, 2, memory\_order\_acquire); \\
-           & ~~memory\_order\_release); & (f) & int a1 = x;            \\
-    \end{tabular}
-  }
-
-  \bigskip
-
-  {\tt\small
-    \begin{tabular}{cl||cl}
-    \multicolumn{2}{c}{Hart 0} & \multicolumn{2}{c}{Hart 1} \\
-    \hline
-          & li t1, 1    &     & li t1, 1    \\
-      (a) & sd t1,0(s0) & (d) & amoswap~~~ a0,t1,0(s1) \\
-      (b) & fence rw,w  & (e) & amoswap.aq x0,a1,0(s1) \\
-      (c) & sd t1,0(s1) & (f) & ld~~~~~~~~ a1,0(s0)    \\
-    \end{tabular}
-  }
-  ~~~~
-  \diagram
-  \caption{C/C++ release sequence example}
-  \label{fig:relseq}
-\end{figure}
-
-In Figure~\ref{fig:relseq}, the original C/C++ source code has a ``synchronizes-with'' relationship from (c) to (e) via (d), where the latter is part of the ``release sequence'' of (c).
-Therefore, RVWMO must somehow require (c) to appear before (e) in the global memory order.
-Without rule~\ref{ppo:loadtoacq}, (c) would precede (d), but (d) would {\em not} precede (e) due to ``fri; rfi'' behavior (Chapter~\ref{sec:ppo:rdw}).
-Rule~\ref{ppo:loadtoacq} therefore fixes the missing link by placing both the load and the store part of (d) before (e) in the global memory order.
-\end{comment}
-
 Release orderings work exactly the same as acquire orderings, just in the opposite direction.  Release semantics require all loads and stores in the critical section to appear before the lock-releasing store (here, an {\tt amoswap}) in the global memory order.  This can be enforced using the {\tt .rl} bit or with a {\tt fence rw,w} operations.  Likewise, the ordering between the loads and stores in the critical section and the ``random unrelated store'' at the end of the code snippet is enforced only by the {\tt fence rw,w} in the second example, not by the {\tt .rl} in the first example.
-%Note that a corollary of rule~\ref{ppo:loadtoacq} is not needed for release operations because it would be redundant with rule~\ref{ppo:->st}.
 
-By default, store-release-to-load-acquire ordering is not enforced.  This facilitates the porting of code written under the TSO and/or RCpc memory models; see Chapter~\ref{sec:porting} for details.
+With RCpc annotations alone, store-release-to-load-acquire ordering is not enforced.  This facilitates the porting of code written under the TSO and/or RCpc memory models.  C/C++ falls into this category as well.  See Section~\ref{sec:porting} for details.
 To enforce store-release-to-load-acquire ordering, use store-release-RCsc and load-acquire-RCsc operations, so that PPO rule \ref{ppo:strongacqrel} applies.
 The use of only store-release-RCsc and load-acquire-RCsc operations implies sequential consistency, as the combination of PPO rules \ref{ppo:acquire}--\ref{ppo:strongacqrel} implies that all RCsc accesses will respect program order.
+However, this RCsc store-release-to-load-acquire ordering only applies when both of the operations in question have an RCsc annotation (or stronger).
 
-AMOs with both {\tt .aq} and {\tt .rl} set are fully-ordered operations.
-Treating the load part and the store part as independent RCsc operations is not in and of itself sufficient to enforce full fencing behavior, but this subtle weak behavior is counterintuitive and not much of an advantage architecturally, especially with {\tt lr} and {\tt sc} also available.
-For this reason, AMOs annotated with {\tt .aqrl} are strengthened to being fully-ordered under RVWMO.
+\subsection{Atomics and LR/SCs (Rule~\ref{ppo:amoforward}, Atomicity Axiom)}
+\begin{tabular}{p{2cm}|p{12cm}}
+  Rule \ref{ppo:amoforward}: & \ppoamoforward \\
+  Atomicity axiom: & \atomicityaxiom
+\end{tabular}
 
-%The RVWMO memory model rules do not place any explicit restrictions on whether atomics can forward values from stores still in a store buffer, as some particularly aggressive microarchitectures may do this at times.
-%Such behavior is compatible with higher-level software memory model such as the one used by C/C++ if the mappings of Chapter~\ref{sec:porting} are used.
-%However, such forwarding can be prevented manually if desired by placing a {\tt fence w,r,[addr]} between the store and the load in question.
+The RISC-V architecture decouples the notion of atomicity from the notion of ordering.  Unlike architectures such as TSO, RISC-V atomics under RVWMO do not impose any ordering requirements by default.  Ordering semantics are only guaranteed by the PPO rules that otherwise apply.
+
+RISC-V contains two types of atomics: AMOs and LR/SC pairs.
+These conceptually behave differently, in the following way.
+LR/SC behave as if the old value is brought up to the core, modified, and written back to memory, all while the reservation is held.
+AMOs on the other hand conceptually behave as if they are performed directly in memory.
+AMOs are therefore inherently atomic, while LR/SC pairs are atomic in the sense that the memory location in question will not be modified by another hart during the time the original hart holds the conceptual reservation.
+
+\begin{verbbox}
+(a) lr.d t0, 0(a0)
+(b) sd   t1, 0(a0)
+(c) sc.d t2, 0(a0)
+\end{verbbox}
+\begin{figure}[h!]
+  \centering\small
+  \theverbbox
+  \caption{Store-conditional (c) may succeed on some implementations}
+  \label{fig:litmus:lrsdsc}
+\end{figure}
+
+The atomicity axiom does not forbid loads from being interleaved between the paired operations in program order or in the global memory order, nor does it forbid stores from the same hart from appearing between the paired operations in either program order or in the global memory order.
+For example, the sequence in Figure~\ref{fig:litmus:lrsdsc} is legal, and the {\tt sc} may (but is not guaranteed to) succeed.
+By preserved program order rule \ref{ppo:->st}, the program order of the three operations must be maintained in the global memory order.  This does not violate the atomicity axiom, because the intervening non-conditional store is from the same hart as the paired load-reserved and store-conditional instructions.
+This way, a memory system that tracks all memory accesses beyond L1 at cache line granularity will not be forced to fail a store conditional instruction that happens to (falsely) share another portion of the same cache line as the memory held by the reservation.
+
+Rule~\ref{ppo:amoforward} simply states that a value cannot be returned from an AMO to a subsequent load until the AMO has performed globally.
+This follows naturally from the intuition that AMOs are performed directly in memory, except possibly for the case of {\tt amoswap}.
+Rule~\ref{ppo:amoforward} states that hardware may not (non-speculatively) forward the value being stored by the {\tt amoswap} to a subsequent load, even though that store value is not actually semantically dependent on the previous value in memory, as is the case for the other AMOs.
 
 \subsection{Dependencies (Rules~\ref{ppo:addr}--\ref{ppo:ctrl})}
 \label{sec:depspart1}
@@ -362,12 +346,33 @@ For this reason, AMOs annotated with {\tt .aqrl} are strengthened to being fully
   & Rule \ref{ppo:addr}: \ppoaddr \\
   & Rule \ref{ppo:data}: \ppodata \\
   & Rule \ref{ppo:ctrl}: \ppoctrl \\
-%  & Rule \ref{ppo:success}: \pposuccess \\
 \end{tabular}
 
 Dependencies from a load to a later memory operation in the same hart are respected by the RVWMO memory model.
 The Alpha memory model was notable for choosing {\em not} to enforce the ordering of such dependencies, but most modern hardware and software memory models consider allowing dependent instructions to be reordered too confusing and counterintuitive.
 Furthermore, modern code sometimes intentionally uses such dependencies as a particularly lightweight ordering enforcement mechanism.
+
+The terms in Section~\ref{sec:deps} work as follows.
+Instructions are said to carry dependencies from their source register(s) to their destination register(s) whenever the value written into each destination register is a function of the source register(s).
+For most instructions, this means that the destination register(s) carry a dependency from all source register(s).
+However, there are a few notable exceptions.
+In the case of memory instructions, the value written into the destination register ultimately comes from the memory system rather than from the source register(s) directly, and so this breaks the chain of dependencies carried from the source register(s).
+In the case of indirect jumps, the value written into the destination register comes from the current {\tt pc} (which is never considered a source register by the memory model), and so likewise, indirect jumps do not carry a dependency from the source register(s) to the destination register.
+
+Lastly, the notion of accumulating into a destination register rather than writing into it reflects the behavior of CSRs such as {\tt fflags}.
+In particular, an accumulation into a register does not clobber any previous writes or accumulations into the same register.
+For example, in Figure~\ref{fig:litmus:fflags}, (c) has a syntactic dependency on both (a) and (b).
+\begin{verbbox}
+(a) fadd  f3,f1,f2
+(b) fadd  f6,f4,f5
+(c) csrrs a0,fflags,x0
+\end{verbbox}
+\begin{figure}
+  \centering\small
+  \theverbbox
+  \caption{(c) has a syntactic dependency on both (a) and (b) via {\tt fflags}, a destination register which both (a) and (b) implicitly accumulate into}
+  \label{fig:litmus:fflags}
+\end{figure}
 
 Like other modern memory models, the RVWMO memory model uses syntactic rather than semantic dependencies.
 In other words, this definition depends on the identities of the
@@ -430,9 +435,10 @@ Likewise, consider Figure~\ref{fig:litmus:control2}.
 Even though both branch outcomes have the same target, there is still a control dependency from the first instruction in this snippet to the last.
 This definition of control dependency is subtly stronger than what might be seen in other contexts (e.g., C++), but it conforms with standard definitions of control dependencies in the literature.
 
-\begin{tentative}
-  The text below is out of date; we are still discussing success dependencies.
-\end{tentative}
+Notably, PPO rules \ref{ppo:addr}--\ref{ppo:ctrl} are also intentionally designed to respect dependencies which originate from the output of a successful store conditional instruction.
+In general, an {\tt sc} instruction will be followed by a branch checking whether the outcome was successful; this implies that there will be a control dependency from the store operation generated by the {\tt sc} instruction to any memory operations following the branch.
+PPO rule~\ref{ppo:ctrl} in turn implies that any subsequent store operations will appear later in the global memory order than the store operation generated by the {\tt sc}.
+
 \begin{figure}[h!]
   \center
   {
@@ -452,15 +458,12 @@ This definition of control dependency is subtly stronger than what might be seen
   \label{fig:litmus:successdeps}
 \end{figure}
 
-Finally, we highlight a unique new rule regarding the success registers written by store-conditional instructions.
-In certain cases, without PPO rule \ref{ppo:success}, a store conditional could in theory be made to store its own success output value as its data, in a manner reminiscent of so-called out-of-thin-air behavior.
-This is shown in Figure~\ref{fig:litmus:successdeps}.
+In addition, the choice to respect dependencies originating at store-conditional instructions ensures that certain out-of-thin-air-like behaviors will be prevented.
+Consider Figure~\ref{fig:litmus:successdeps}.
 Suppose a hypothetical implementation could occasionally make some early guarantee that a store-conditional operation will succeed.
 In this case, (c) could return 0 to {\tt a2} early (before actually executing), allowing the sequence (d), (e), (f), (a), and then (b) to execute, and then (c) might execute (successfully) only at that point.
 This would imply that (c) writes its own success value to {\tt 0(s1)}!
-
-To rule out this bizarre behavior, PPO rule~\ref{ppo:success} says that store-conditional instructions may not return success or failure into the destination register until both the address and data for the instruction have been resolved.
-In the example above, this would enforce an ordering from (a) to (d), and this would in turn form a cycle that rules out the strange proposed execution.
+Fortunately, this situation and others like it are prevented by the fact that RVWMO respects dependencies originating at the stores generated by successful {\tt sc} instructions.
 
 \subsection{Same-Address Load-Load Ordering (Rule~\ref{ppo:rdw})}
 \label{sec:ppo:rdw}
@@ -548,129 +551,6 @@ Therefore, PPO rule~\ref{ppo:rdw} forbids this CoRR violation from occurring.
 As such, PPO rule~\ref{ppo:rdw} strikes a careful balance between enforcing CoRR in all cases while simultaneously being weak enough to permit ``RSW'' and ``fri-rfi'' patterns that commonly appear in real microarchitectures.
 
 
-\subsection{Atomics and LR/SCs (Atomicity Axiom)}
-\begin{tabular}{p{1cm}|p{12cm}} &
-Atomicity axiom: \atomicityaxiom
-\end{tabular}
-
-The RISC-V architecture decouples the notion of atomicity from the notion of ordering.  Unlike architectures such as TSO, RISC-V atomics under RVWMO do not impose any ordering requirements by default.  Ordering semantics are only guaranteed by the PPO rules that otherwise apply.
-This relaxed nature allows implementations to be aggressive about forwarding values even before a paired store has been committed to memory.
-
-Roughly speaking, the atomicity rule states that there can be no store from another hart during the time the reservation is held.
-For AMOs, the reservation is held as the AMO is being performed.
-For successful {\tt lr}/{\tt sc} pairs, the reservation is held between the time the {\tt lr} is performed and the time the {\tt sc} is performed.
-In most cases, the atomicity rule states that there can be no store from another hart between the load and its paired store in global memory order.
-
-There is one exception, however: if the paired load returns its value from a store $s$ still in the store buffer (which some implementations may permit), then the reservation may not need to be acquired until $s$ is ready to leave the store buffer, and this may occur after the paired load has already performed.
-Therefore, in this case, the requirement is only that no other store from another hart to an overlapping address can appear between time that $s$ performs and the time that the paired store performs.
-Consider the example of Figure~\ref{fig:litmus:lateatomic}:
-
-\begin{figure}[h!]
-  \centering
-  {
-    \setlength{\tabcolsep}{2mm}
-    \tt\footnotesize
-    \begin{tabular}{cl||cl}
-    \multicolumn{2}{c}{Hart 0} & \multicolumn{2}{c}{Hart 1} \\
-    \hline
-          & li~~~~~~ t1, 2       &     & li~~~~~~~~ t3, 2    \\
-          & li~~~~~~ t2, 1       &     & li~~~~~~~~ t4, 1    \\
-      (a) & sd~~~~~~ t1,0(s0)    & (d) & sd~~~~~~~~ t3,0(s1) \\
-      (b) & amoor.aq a0,t2,0(s0) & (e) & amoswap.rl x0,t4,0(s0) \\
-      (c) & sd~~~~~~ t2,0(s1)    &     &             \\
-    \end{tabular}
-  }
-  ~~
-  \diagram
-  \caption{A litmus test where the reservation for {\tt 0(s0)} may not be acquired until after the load of (b) has already completed}
-  \label{fig:litmus:lateatomic}
-\end{figure}
-
-The outcome {\tt 0(s0)=3, 0(s1)=2} is legal, with the global memory order of (b0),(c),(d),(e),(a),(b1), where (b0) and (b1) represent the load and store parts, respectively, of (b).
-The atomic operation (b) does not need to grab the reservation until (a) is ready to leave the store buffer.
-Therefore, although (e) is a store to the same address from another hart, and even though (e) lies between (b0) and (b1) in global memory order, this execution does not violate the atomicity axiom because (e) precedes (a) in global memory order.
-
-\begin{verbbox}
-(a) lr t0, 0(a0)
-(b) sd t1, 0(a0)
-(c) sc t2, 0(a0)
-\end{verbbox}
-\begin{figure}[h!]
-  \centering\small
-  \theverbbox
-  \caption{Store-conditional (c) may succeed on some implementations}
-  \label{fig:litmus:lrsdsc}
-\end{figure}
-
-The atomicity rule does not forbid loads from being interleaved between the paired operations in program order or in the global memory order, nor does it forbid stores from the same hart from appearing between the paired operations in either program order or in the global memory order.
-For example, the sequence in Figure~\ref{fig:litmus:lrsdsc} is legal, and the {\tt sc} may (but is not guaranteed to) succeed.
-By preserved program order rule \ref{ppo:->st}, the program order of the three operations must be maintained in the global memory order.  This does not violate the atomicity axiom, because the intervening non-conditional store is from the same hart as the paired load-reserved and store-conditional instructions.
-
-\begin{figure}[h!]
-  \centering
-  {
-    \setlength{\tabcolsep}{1mm}
-    \tt\footnotesize
-    \begin{tabular}{cl||cl}
-    \multicolumn{2}{c}{Hart 0} & \multicolumn{2}{c}{Hart 1} \\
-    \hline
-          & li t0, 1              &     &             \\
-      (a) & amoor.aq a0,t0,0(s0)  & (c) & amoadd.aq a1,x0,0(s1) \\
-      (b) & sd~~~~~~ t0,0(s1)     & (d) & ld~~~~~~~ a2,0(s0) \\
-    \end{tabular}
-  }
-  ~~
-  \diagram
-  \caption{The {\tt .aq} applies only to the load part of (a), and hence it does not order the store part of (a) before (b)}
-  \label{fig:litmus:amoaq}
-\end{figure}
-
-Likewise, in the test of Figure~\ref{fig:litmus:amoaq}, the following global memory order could result in the outcome {\tt a1=1, a2=0}: (a0), (b), (c), (d), (a1).
-
-Overall, the atomicity rule ensures that non-synchronization atomic operations (e.g., incrementing a counter) can be made as efficient as possible in high-performance implementations, while simultaneously ensuring that the atomicity conditions necessary for achieving consensus are maintained.
-
-
-\begin{comment}
-%\subsection{Atomics and Store Forwarding (Rules \ref{ppo:rmwrfi}--\ref{ppo:rfiaq})}
-\subsection{Atomics and Store Forwarding (Rule \ref{ppo:rfiaq})}
-\begin{tabular}{p{1cm}|p{12cm}}
-%  & Rule \ref{ppo:rmwrfi}: \ppormwrfi \\
-  & Rule \ref{ppo:rfiaq}: \pporfiaq \\
-\end{tabular}
-
-  There is one exception to the rule that ``fri-rfi'' reordering from Chapter~\ref{sec:ppo:rdw} is permitted: sequences in which the first memory access is part of an AMO or {\tt lr}/{\tt sc} pair and the second is a load with its {\tt .aq} bit set.  Rule~\ref{ppo:rfiaq} ensures compatibility with causality chains of the form ({\tt rf; ppo; rf; ppo;} $\dots$), and with C/C++ release sequences in particular.  Consider the following variant of test MP+FENCE+fri-rfi-addr (with labels reused from the earlier example):
-
-\begin{center}
-  \tt\footnotesize
-  \begin{tabular}{cl||cl}
-  \multicolumn{2}{c}{Hart 0} & \multicolumn{2}{c}{Hart 1} \\
-  \hline
-        & li t1, 1    &      & li    t2, 2    \\
-    (a) & sw t1,0(s0) &      & li    t3, 1    \\
-    (b) & fence w, w  & (de) & amoor t3,a0,0(s1) \\
-    (c) & sw t1,0(s1) & (f)  & lw.aq a1,0(s1) \\
-        &             & (i)  & lw    a2,0(s0) \\
-  \end{tabular}
-  ~~~~
-  \begin{tabular}{cl||cl}
-  \multicolumn{4}{c}{\rm Abstracted assembly} \\
-  \\
-  \multicolumn{2}{c}{Hart 0} & \multicolumn{2}{c}{Hart 1} \\
-  \hline
-        &            &      &            \\
-    (a) & St [x], 1  &      &            \\
-    (b) & Fence w,w  & (de) & AMOOr a0, 1, [y] \\ 
-    (c) & St [y], 1  & (f)  & Ld.aq a1, [y] \\
-        &            & (i)  & Ld a2, [x] \\
-  \end{tabular}
-\end{center}
-
-Programmers (and C/C++) expect the causality chain from (a) to (c) to (de) to (f) to (i) to be enforced.
-However, the PPO rules covered so far only enforce global memory ordering from (a) to (c) to (d) (the load of the AMOOr) to (e) (the store of the AMOOr), and from (f) to (i), but not from (e) to (f).
-\ref{ppo:rfiaq} fills this missing link by ensuring that the ordering from (e) to (f) is respected, and hence that the entire ordering chain from (a) to (i) is respected.
-\end{comment}
-
-
 \subsection{Pipeline Dependency Artifacts (Rules~\ref{ppo:ld->st->ld}--\ref{ppo:addrpo})}
 \label{sec:ppopipeline}
 \begin{tabular}{p{1cm}|p{12cm}}
@@ -722,10 +602,6 @@ Consider Figure~\ref{fig:litmus:addrdatarfi}:
 
 If there were another store to the same address in between (b) and (c), as in Figure~\ref{fig:litmus:addrdatarfi_no}, then (c) would no longer dependent on the data of (b) being resolved, and hence the dependency of (c) on (a), which produces the data for (b), would be broken.
 
-One subtle related note is that {\tt amoswap} does not contain a data dependency from its load to its store.  Nor does every {\tt sc} have a data dependency on its paired {\tt lr}.
-Therefore, Rule~\ref{ppo:ld->st->ld} does not enforce an ordering from paired loads of this category to subsequent loads to overlapping addresses.
-%Rule~\ref{ppo:loadtoacq} is therefore not quite redundant with Rule~\ref{ppo:ld->st->ld}, even when the first load and the store in this example are paired.
-
 Rule~\ref{ppo:addrpo} makes a similar observation to the previous rule: a store cannot be performed at memory until all previous loads which might access the same address have themselves been performed.
 Such a load must appear to execute before the store, but it cannot do so if the store were to overwrite the value in memory before the load had a chance to read the old value.
 
@@ -749,51 +625,6 @@ Such a load must appear to execute before the store, but it cannot do so if the 
 Consider Figure~\ref{fig:litmus:addrpo}:
 (c) cannot be executed until the address for (b) is resolved, because it may turn out that the addresses match; i.e., that {\tt a0=s1}.  Therefore, (c) cannot be sent to memory before (a) has executed and confirmed whether the addresses to indeed overlap.
 
-\begin{tentative}
-  The text below is out of date; we are likely eliminating fence.i rules entirely.
-\end{tentative}
-
-\begin{figure}[h!]
-  \centering
-  {
-    \tt\small
-    \begin{tabular}{rl}
-    (a)       & ld a0, 0(s0) \\
-              & xor a1,a0,a0 \\
-              & bne a1, critical \\
-    critical: & fence.i \\
-    (c)       & ld a1, 0(s1) \\
-    \end{tabular}
-  }
-  ~~~~
-  \diagram
-  \caption{Because of the control dependency from (a) to (c), (a) also precedes (c)}
-  \label{fig:litmus:ctrlcfence}
-\end{figure}
-
-Rule~\ref{ppo:ctrlcfence} reflects the idiom of Figure~\ref{fig:litmus:ctrlcfence} for a lightweight acquire fence:
-In this code snippet, (c) cannot execute until the {\tt fence.i} is cleared.  The {\tt fence.i} cannot clear until the branch has executed and drained.  The branch cannot execute until it receives the value from (a) through the {\tt xor}.  Therefore, (a) must precede (c) in the global memory order.
-
-\begin{figure}[h!]
-  \centering
-  {
-    \tt\small
-    \begin{tabular}{cl}
-    (a)       & ld a0, 0(s0) \\
-    (b)       & ld a1, 0(a0) \\
-              & fence.i \\
-    (c)       & ld a1, 0(s1) \\
-    \end{tabular}
-  }
-  ~~~~
-  \diagram
-  \caption{Because of the address dependency from (a) to (b) and the {\tt fence.i} between (b) and (c), (a) precedes (c)}
-  \label{fig:litmus:addrpocfence}
-\end{figure}
-
-Rule~\ref{ppo:addrpocfence} and Figure~\ref{fig:litmus:addrpocfence} present a similar situation:
-Once again, (c) cannot execute until the {\tt fence.i} is cleared.  The {\tt fence.i} cannot clear until both (a) and (b) have at least issued (even if they have not yet returned a value).  Finally, (b) cannot issue until it receives its address from (a).  Therefore, (a) must precede (c) in global memory order.
-
 \subsection{Progress Axiom}
 \label{sec:ppopipeline}
 \begin{tabular}{p{1cm}|p{12cm}}
@@ -813,13 +644,15 @@ Implementations with non-coherent caches may have to provide some other mechanis
 
 \section{FENCE.I, SFENCE.VMA, and I/O Fences}
 
+\textcolor{red}{DL: I stopped here...}
+
 In this section, we provide an informal description of how the {\tt fence.i}, {\tt sfence.vma}, and I/O fences interact with the memory model.
 
 Instruction fetches and address translation operations (where applicable) follow the RISC-V memory model as well as the rules below.
 \begin{itemize}
   \item {\tt fence.i}: Conceptually, {\tt fence.i} ensures that the fetch of each instruction following the {\tt fence.i} in program order appears later in the global memory order than all stores prior to the {\tt fence.i} in program order.
     That in turn means that instruction caches which hardware does not keep coherent with normal memory must be flushed when a {\tt fence.i} instruction is executed.
-    %({\tt fence.i} is also used form the patterns of Chapter~\ref{sec:ppopipeline}.)
+    %({\tt fence.i} is also used form the patterns of Section~\ref{sec:ppopipeline}.)
   \item {\tt sfence.vma}: Conceptually, the instruction fetch and address translation operations of each instruction following the {\tt sfence.vma} in program order appears later in the global memory order than all stores prior to the {\tt sfence.vma} in program order.
     This implies that stale entries in the local hart's TLBs must be invalidated.
   \item Conceptually, updates to the page table made by a hardware page table walker form a paired atomic read-modify-write operation subject to the rules of the atomicity axiom
@@ -841,6 +674,8 @@ Here, we simply discuss how the various details in each PMA relate to the memory
 
 
 \subsection{I/O Ordering}
+
+\textcolor{red}{FIXME: AMOs to I/O will generally have to follow a stronger notion of atomicity.}
 
 For I/O, the load value axiom and atomicity axiom in general do not apply, as both reads and writes might have device-specific side effects.
 The preserved program order rules do not generally apply to I/O either.
@@ -971,7 +806,7 @@ Mapping even unordered load-reserved instructions onto {\tt lr.aq} (particularly
 However, due to a subtle mismatch between the two models, strict theoretical compatibility with the ARMv8 memory model requires that a naive mapping translate all ARMv8 store conditional and load-acquire operations map onto RISC-V RCsc operations.
 Any atomics which are naively ported into RCsc operations may revert back to the straightforward mapping if the programmer can verify that the code is not relying on an ordering from the store-conditional to the load-acquire (as this is not common).
 
-%ARMv8 solves the C/C++ release sequence problem of Chapter~\ref{sec:acqrel} through a rule that is different from rule~\ref{ppo:loadtoacq}.
+%ARMv8 solves the C/C++ release sequence problem of Section~\ref{sec:acqrel} through a rule that is different from rule~\ref{ppo:loadtoacq}.
 %Therefore, strict formal compatibility requires naively-ported ARMv8 load-acquire operations to be preceded by a {\tt fence w,r,[addr]} or stronger.
 %The naive translations of ARM {\tt ldapr}, {\tt ldar}, and {\tt stlr} are therefore ``{\tt fence w,r,[addr]; amoor.aq rd,[addr],x0}'', ``{\tt fence w,r,[addr]; amoor.aq.rl rd,[addr],x0}'' and ``{\tt amoswap.aq.rl} with {\tt rd=x0}'', respectively.
 %In general the extra fence would not have been necessary if the original source were recompiled to RISC-V natively, because the RVWMO memory model already solves the same underlying problem just in a different way.
@@ -1062,7 +897,6 @@ The Linux fences {\tt rmb()}, {\tt wmb()}, and {\tt mb()} map onto {\tt fence ri
 \end{table}
 
 The C11/C++11 {\tt memory\_order\_*} primitives should be mapped as shown in Table~\ref{tab:mappings}.
-The {\tt memory\_order\_acquire} orderings in particular must use fences rather than atomics to ensure that release sequences behave correctly even in the presence of {\tt amoswap}.
 The {\tt memory\_order\_release} mappings may use {\tt .rl} as an alternative.
 
 \begin{table}[h!]
@@ -1093,6 +927,7 @@ The {\tt memory\_order\_release} mappings may use {\tt .rl} as an alternative.
 It is also safe to translate any {\tt .aq}, {\tt .rl}, or {\tt .aqrl} annotation into the fence-based snippets of Table~\ref{tab:aqrltofence}.
 These can also be used as a legal implementation of {\tt l\{b|h|w|d\}} or {\tt s\{b|h|w|d\}} pseudoinstructions for as long as those instructions are not added to the ISA.
 
+
 \section{Implementation Guidelines}
 
 The RVWMO and RVTSO memory models by no means preclude microarchitectures from employing sophisticated speculation techniques or other forms of optimization in order to deliver higher performance.
@@ -1102,7 +937,7 @@ Microarchitectures are free to use any pipeline design, any coherent or non-cohe
 That said, to help people understand the actual implementations of the memory model, in this section we provide some guidelines below on how architects and programmers should interpret the models' rules.
 
 Both RVWMO and RVTSO are multi-copy atomic (or ``other-multi-copy-atomic''): any store value which is visible to a hart other than the one that originally issued it must also be conceptually visible to all other harts in the system.
-In other words, harts may forward from their own previous stores before those stores have become globally visible to all harts, but no other early intra-hart forwarding is permitted.
+In other words, harts may forward from their own previous stores before those stores have become globally visible to all harts, but no early inter-hart forwarding is permitted.
 Multi-copy atomicity may be enforced in a number of ways.
 It might hold inherently due to the physical design of the caches and store buffers, it may be enforced via a single-writer/multiple-reader cache coherence protocol, or it might hold due to some other mechanism.
 
@@ -1116,7 +951,7 @@ As a rough guideline for interpreting the PPO rules in RVWMO, we expect the foll
   \item programmers will use PPO rules \ref{ppo:->st}--\ref{ppo:amoload} regularly and actively.
   \item expert programmers will use PPO rules \ref{ppo:addr}--\ref{ppo:ctrl} to speed up critical paths of important data structures.
   %\item expert programmers will occasionally use PPO rules \ref{ppo:rdw}--\ref{ppo:rfiaq} in very aggressive code and/or as part of a longer chain of synchronization.
-  \item even expert programmers will rarely if ever use PPO rules \ref{ppo:rdw}--\ref{ppo:addrpo} directly.  These are included to facilitate common microarchitectural optimizations (rule~\ref{ppo:rdw}) and the operational formal modeling approach (rules \ref{ppo:ld->st->ld}--\ref{ppo:addrpo}) described in Chapter~\ref{sec:operational}.  They also facilitate the process of porting code from other architectures which have similar rules.
+  \item even expert programmers will rarely if ever use PPO rules \ref{ppo:rdw}--\ref{ppo:addrpo} directly.  These are included to facilitate common microarchitectural optimizations (rule~\ref{ppo:rdw}) and the operational formal modeling approach (rules \ref{ppo:ld->st->ld}--\ref{ppo:addrpo}) described in Section~\ref{sec:operational}.  They also facilitate the process of porting code from other architectures which have similar rules.
 \end{itemize}
 
 We also expect the following from the hardware perspective:
@@ -1155,7 +990,7 @@ Architectures which implement RVTSO can safely do the following:
 Other general notes:
 
 \begin{itemize}
-  \item Silent stores (i.e., stores which write the same value that already exists at a memory location) do not have any special behavior from a memory model point of view.  Microarchitectures that attempt to implement silent stores must take care to ensure that the memory model is still obeyed, particularly in cases such as RSW (Chapter~\ref{sec:ppo:rdw}) which tend to be incompatible with silent stores.
+  \item Silent stores (i.e., stores which write the same value that already exists at a memory location) do not have any special behavior from a memory model point of view.  Microarchitectures that attempt to implement silent stores must take care to ensure that the memory model is still obeyed, particularly in cases such as RSW (Section~\ref{sec:ppo:rdw}) which tend to be incompatible with silent stores.
   \item Writes may be merged (i.e., two consecutive writes to the same address may be merged) or subsumed (i.e., the earlier of two back-to-back writes to the same address may be elided) as long as the resulting behavior does not otherwise violate the memory model semantics.
 \end{itemize}
 
@@ -1227,6 +1062,11 @@ We expect that these tests will one day serve as part of a compliance test suite
 
 COMING SOON!
 
+\section{TO-DO}
+\begin{itemize}
+  \item Explain all the terms relating to dependencies
+\end{itemize}
+
 \chapter{Formal Memory Model Specifications}
 
 \begin{commentary}
@@ -1237,10 +1077,8 @@ COMING SOON!
   At this point, no individual formalization is considered authoritative, but we may designate one as such in collaboration with the ISA specification and/or formalization task groups.
 \end{commentary}
 
-\section{Axiomatic Specification in Alloy}
+\section{Formal Axiomatic Specification in Alloy}
 \label{sec:alloy}
-
-\textcolor{red}{FIXME! OUT OF DATE!}
 
 We present a formal specification of the RVWMO memory model in Alloy (\url{http://alloy.mit.edu}).
 This model is available online at \url{https://github.com/daniellustig/riscv-memory-model}.
@@ -1443,9 +1281,7 @@ pred total[rel: Event->Event, bag: Event] {
 
 
 \clearpage
-\section{Axiomatic Specification in Herd}
-
-\textcolor{red}{FIXME! OUT OF DATE!}
+\section{Formal Axiomatic Specification in Herd}
 
 See also \url{http://moscova.inria.fr/~maranget/cats7/riscv} for a lot of additional supplementary information.
 
