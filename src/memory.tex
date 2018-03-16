@@ -1283,7 +1283,9 @@ pred total[rel: Event->Event, bag: Event] {
 \clearpage
 \section{Formal Axiomatic Specification in Herd}
 
-See also \url{http://moscova.inria.fr/~maranget/cats7/riscv} for a lot of additional supplementary information.
+The tool \textsf{herd} takes a memory model and a litmus test as input and simulates the execution of the test on top of the memory model. Memory models are written in the domain specific language \textsc{Cat}. This section provides two \textsc{Cat} memory model of RVWMO. The first model, Figure~\ref{fig:herd2}, follows the \emph{global memory order}, Section~\ref{sec:definition}, definition of~RVWMO, as much as is possible for a \textsc{Cat} model. The second model, Figure~\ref{fig:herd3}, is an equivalent, more efficient, partial order based RVWMO model.
+
+The simulator~\textsf{herd} is part of the \textsf{diy} tool suite --- see \url{http://diy.inria.fr} for software and documentation. The models and more are available online at~\url{http://diy.inria.fr/cats7/riscv/}.
 
 \begin{figure}[h!]
   {
@@ -1293,6 +1295,7 @@ See also \url{http://moscova.inria.fr/~maranget/cats7/riscv} for a lot of additi
 (* Utilities *)
 (*************)
 
+(* All fence relations *)
 let fence.r.r = [R];fencerel(Fence.r.r);[R]
 let fence.r.w = [R];fencerel(Fence.r.w);[W]
 let fence.r.rw = [R];fencerel(Fence.r.rw);[M]
@@ -1302,23 +1305,25 @@ let fence.w.rw = [W];fencerel(Fence.w.rw);[M]
 let fence.rw.r = [M];fencerel(Fence.rw.r);[R]
 let fence.rw.w = [M];fencerel(Fence.rw.w);[W]
 let fence.rw.rw = [M];fencerel(Fence.rw.rw);[M]
-
 let fence = 
   fence.r.r | fence.r.w | fence.r.rw |
   fence.w.r | fence.w.w | fence.w.rw |
   fence.rw.r | fence.rw.w | fence.rw.rw
 
-
+(* Same address, no W to the same address in-between *)
 let po-loc-no-w = po-loc \ (po-loc;[W];po-loc)
+(* Read same write *)
 let rsw = rf^-1;rf
-
+(* Load acquire, or stronger  *)
 let LD-ACQ = R & (Acq|AcqRel)
+(* Store release or stronger *)
 and ST-REL = W & (Rel|AcqRel)
-and LD-ACQ-SC = R & AcqRel
-and ST-REL-SC = W & AcqRel
-
-let ST-SC = W & Sc
-and LD-SC = R & Sc
+(* Synonymuos *)
+let RCsc = AcqRel
+(* Amo events are both R and W *)
+let AMO = R & W
+(* Add "artificial" data dependencies, ie paired lr/sc *)
+let data = data | rmw
 
 (*************)
 (* ppo rules *)
@@ -1328,29 +1333,23 @@ let r1 = [M];po-loc;[W]
 and r2 = fence
 and r3 = [LD-ACQ];po;[M]
 and r4 = [M];po;[ST-REL]
-and r5 = [ST-REL-SC];po;[LD-ACQ-SC]
-and r6 = [ST-SC];po;[M]
-and r7 = [M];po;[LD-SC]
-and r8 = [R];addr;[M]
-and r9 = [R];data;[W]
-and r10 = [R];ctrl;[W]
-and r11 = depend;instr;success
-and r12 = ([R];po-loc-no-w;[R]) \ rsw
-and r13 = [R];(addr|data);[W];po-loc-no-w;[R]
-and r14 = [R];addr;[M];po;[W]
-and r15 = [R];ctrl;[Fence.i];po;[R]
-and r16 = [R];addr;[M];po;[Fence.i];po;[M]
+and r5 = [RCsc];po;[RCsc]
+and r6 = [AMO];po-loc;[M]
+and r7 = [M];addr;[M]
+and r8 = [M];data;[W]
+and r9 = [M];ctrl;[W]
+and r10 = ([R];po-loc-no-w;[R]) \ rsw
+and r11 = [R];(addr|data);[W];rfi;[R]
+and r12 = [R];addr;[M];po;[W]
 
-let ppo =
- r1 | r2 | r3 | r4 | r5 | r6 | r7 | r8 | r9
-| r10 | r11 | r12 | r13 | r14 | r15 | r16
+let ppo = r1 | r2 | r3 | r4 | r5 | r6 | r7 | r8 | r9 | r10 | r11 | r12
 \end{lstlisting}
   }
-  \caption{{\tt riscv-defs.cat}, part of a herd version of the RVWMO memory model (1/3)}
+  \caption{{\tt riscv-defs.cat}, a herd definition of preserved program order (1/3)}
   \label{fig:herd1}
 \end{figure}
 
-\begin{figure}[h!]
+\begin{figure}[ht!]
   {
   \tt\bfseries\centering\footnotesize
   \begin{lstlisting}
@@ -1366,9 +1365,9 @@ include "riscv-defs.cat"
 (********************************)
 
 let gmo0 = (* precursor: ie build gmo as an total order that include gmo0 *)
-  loc & (W\FW) * FW | # Final write before any write to the same location
+  loc & (W\FW) * FW | # Final write after any write to the same location
   ppo |               # ppo compatible
-  rfe                 # first half of 
+  rfe                 # includes herd external rf (optimisation)
 
 (* Walk over all linear extensions of gmo0 *)
 with  gmo from linearisations(M\IW,gmo0)
@@ -1387,10 +1386,9 @@ let rfGMO = WR \ (loc&([W];gmo);WR)
 (* Check equality of herd rf and of rfGMO *)
 empty (rf\rfGMO)|(rfGMO\rf) as RfCons
 
-(* Atomic axion *)
+(* Atomicity axiom *)
 let infloc = (gmo & loc)^-1
 let inflocext = infloc & ext
-
 let winside  = (infloc;rmw;inflocext) & (infloc;rf;rmw;inflocext) & [W]
 empty winside as Atomic
 \end{lstlisting}
@@ -1429,7 +1427,7 @@ acyclic co|rfe|fr|ppo as Model
 empty rmw & (fre;coe) as Atomic
 \end{lstlisting}
   }
-  \caption{{\tt riscv.cat}, part of an alternative herd presentation of the RVWMO memory model (3/3)}
+  \caption{{\tt riscv.cat}, an alternative herd presentation of the RVWMO memory model (3/3)}
   \label{fig:herd3}
 \end{figure}
 
