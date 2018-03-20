@@ -1146,15 +1146,15 @@ let fence =
   fence.rw.r | fence.rw.w | fence.rw.rw
 
 (* Same address, no W to the same address in-between *)
-let po-loc-no-w = po-loc \ (po-loc;[W];po-loc)
+let po-loc-no-w = po-loc \ (po-loc?;[W];po-loc)
 (* Read same write *)
 let rsw = rf^-1;rf
-(* Load acquire, or stronger  *)
-let LD-ACQ = R & (Acq|AcqRel)
-(* Store release or stronger *)
-and ST-REL = W & (Rel|AcqRel)
-(* Synonymuos *)
-let RCsc = AcqRel
+(* Acquire, or stronger  *)
+let AQ = Acq|AcqRel
+(* Release or stronger *)
+and RL = RelAcqRel
+(* All RCsc *)
+let RCsc = Acq|Rel|AcqRel
 (* Amo events are both R and W *)
 let AMO = R & W
 (* Add "artificial" data dependencies, ie paired lr/sc *)
@@ -1164,16 +1164,20 @@ let data = data | rmw
 (* ppo rules *)
 (*************)
 
+(* Overlapping-Address Orderings *)
 let r1 = [M];po-loc;[W]
-and r2 = fence
-and r3 = [LD-ACQ];po;[M]
-and r4 = [M];po;[ST-REL]
-and r5 = [RCsc];po;[RCsc]
-and r6 = [AMO];po-loc;[M]
-and r7 = [M];addr;[M]
-and r8 = [M];data;[W]
-and r9 = [M];ctrl;[W]
-and r10 = ([R];po-loc-no-w;[R]) \ rsw
+and r2 = ([R];po-loc-no-w;[R]) \ rsw
+and r3 = [AMO];po-loc;[M]
+(* Explicit Synchronization *)
+and r4 = fence
+and r5 = [AQ];po;[M]
+and r6 = [M];po;[RL]
+and r7 = [RCsc];po;[RCsc]
+(* Syntactic Dependencies *)
+and r8 = [M];addr;[M]
+and r9 = [M];data;[W]
+and r10 = [M];ctrl;[W]
+(* Pipeline Dependencies *)
 and r11 = [R];(addr|data);[W];rfi;[R]
 and r12 = [R];addr;[M];po;[W]
 
