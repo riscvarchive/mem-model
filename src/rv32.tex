@@ -1380,6 +1380,7 @@ It is then subject to the constraints defined in the rest of this section.
 Any execution satisfying all of the memory model constraints is a legal execution (as far as the memory model is concerned).
 
 \subsubsection*{Memory Model Primitives}
+\label{sec:rvwmo:primitives}
 The {\em program order} over memory operations reflects the order in which the instructions that generate each load and/or store are logically laid out in that hart's dynamic instruction stream; i.e., the order in which a simple in-order processor would execute the instructions of that hart.
 
 Each aligned memory instruction other than an unsuccessful {\tt sc} instruction gives rise to exactly one memory operation, which executes atomically: it can never be observed in a partially-complete state.
@@ -1534,11 +1535,17 @@ An execution of a RISC-V program obeys the RVWMO memory consistency model only i
 
 \newcommand{\progressaxiom}{No memory operation may be preceded in the global memory order by an infinite sequence of other memory operations.}
 
-\textbf{Load Value Axiom:} \loadvalueaxiom
+\paragraph{Load Value Axiom}
+\label{rvwmo:ax:load}
+\loadvalueaxiom
 
-\textbf{Atomicity Axiom:} \atomicityaxiom
+\paragraph{Atomicity Axiom}
+\label{rvwmo:ax:atom}
+\atomicityaxiom
 
-\textbf{Progress Axiom:} \progressaxiom
+\paragraph{Progress Axiom}
+\label{rvwmo:ax:prog}
+\progressaxiom
 
 \subsection{Extending RVWMO to Support Misaligned Atomics}
 \label{sec:misalignedatomics}

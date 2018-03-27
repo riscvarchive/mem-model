@@ -83,10 +83,10 @@ This discrepancy captures (among other things) the reordering effects of bufferi
 For example, $b$ may have returned a value from a store in the store buffer, while $a$ may have ignored that younger store and read an older value from memory instead.
 To account for this, at the time each load performs, the value it returns is determined by the load value axiom, not just strictly by determining the most recent store to the same address in the global memory order, as described below.
 
-\subsection{Load Value Axiom}
+\subsection{\nameref*{rvwmo:ax:load}}
 \label{sec:memory:loadvalueaxiom}
 \begin{tabular}{p{1cm}|p{12cm}} &
-Load Value Axiom:\loadvalueaxiom
+\nameref{rvwmo:ax:load}: \loadvalueaxiom
 \end{tabular}
 
 Preserved program order is {\em not} required to respect the ordering of a store followed by a load to an overlapping address.
@@ -151,10 +151,10 @@ Even though (b) precedes (a) in the global memory order, (a) will still be visib
 Therefore, even if (b) precedes (a) in the global memory order, (b) should return the value written by (a) because (a) precedes (b) in program order.
 Likewise for (e) and (f).
 
-\subsection{Atomicity Axiom}
+\subsection{\nameref*{rvwmo:ax:atom}}
 \label{sec:memory:atomicityaxiom}
 \begin{tabular}{p{1cm}|p{12cm}} &
-  Atomicity Axiom for Aligned Atomics: \atomicityaxiom
+\nameref{rvwmo:ax:atom} (for Aligned Atomics): \atomicityaxiom
 \end{tabular}
 
 The RISC-V architecture decouples the notion of atomicity from the notion of ordering.  Unlike architectures such as TSO, RISC-V atomics under RVWMO do not impose any ordering requirements by default.  Ordering semantics are only guaranteed by the PPO rules that otherwise apply.
@@ -197,10 +197,10 @@ For example, the sequences in Figure~\ref{fig:litmus:lrsdsc} are legal, and the 
 This does not violate the atomicity axiom, because the intervening non-conditional store is from the same hart as the paired load-reserved and store-conditional instructions.
 This way, a memory system that tracks memory accesses at cache line granularity (and which therefore will see the two snippets of Figure~\ref{fig:litmus:lrsdsc} as identical) will not be forced to fail a store conditional instruction that happens to (falsely) share another portion of the same cache line as the memory location being held by the reservation.
 
-\subsection{Progress Axiom}
+\subsection{\nameref*{rvwmo:ax:prog}}
 \label{sec:progress}
-\begin{tabular}{p{1cm}|p{12cm}}
-  & Progress Axiom: \progressaxiom
+\begin{tabular}{p{1cm}|p{12cm}} &
+\nameref{rvwmo:ax:prog}: \progressaxiom
 \end{tabular}
 
 The progress axiom ensures a minimal forward progress guarantee.
