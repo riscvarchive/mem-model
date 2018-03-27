@@ -109,7 +109,7 @@ Instead, the model depends on an external oracle that provides an opcode when gi
   value from the most recent program-order-predecessor instruction instance that writes to that register.
 \item[$\circ$] \nameref{omm:sail_interp}: This covers pseudocode
   internal computation: arithmetic, function calls, etc.
-\item[$\circ$] \nameref{omm:finish}: At this point the instruction pseudocode is done, the instruction cannot be restarted or discarded, and all memory effects have taken place.
+\item[$\circ$] \nameref{omm:finish}: At this point the instruction pseudocode is done, the instruction cannot be restarted, memory accesses cannot be discarded, and all memory effects have taken place.
 For conditional branch and indirect jump instructions, any program order successors that were fetched from an address that is not the one that was written to the {\em pc} register are discarded, together with the sub-tree of instruction instances below them.
 \end{itemize}
 
@@ -570,8 +570,6 @@ Before taking the transition above, the store operation of the AMO does not have
 \paragraph{Commit fence}\label{omm:commit_fence}
 A fence instruction instance $i$ in state {\sc Plain}({\sc Fence}({\it kind}, {\it next\_state})) can be committed if:
 \begin{enumerate}
-\item all program-order-previous conditional branch and indirect jump instructions are finished;
-\fixme{this looks stronger than intended, but actually it has no observable effect for most fences; the exception is ``fence w,r'', e.g., MP+fence.w.w+ctrlfence.w.r is allowed by Daniel's model but forbidden as a consequence of this condition. Fixing this means changing the invariant that finished instructions are never discarded, to finished load/store instructions are never discarded. Is RISC-V going to include ``fence w,r''?}
 \item if $i$ has {\em .pr} set, all program-order-previous load instructions are finished; and
 \item if $i$ has {\em .pw} set, all program-order-previous store instructions are finished.
 % \item if $i$ is a {\em fence.i} instruction, all program-order-previous memory access instructions have fully determined memory footprints.
@@ -631,7 +629,7 @@ A non-finished instruction instance $i$ in state {\sc Plain}({\sc Done}) can be 
 \end{enumerate}
 Action:
 \begin{enumerate}
-\item if $i$ is a conditional branch or indirect jump instruction, discard any untaken paths of execution, i.e., remove any (non-finished) instructions that are not reachable by the branch/jump taken in {\it instruction\_tree}; and
+\item if $i$ is a conditional branch or indirect jump instruction, discard any untaken paths of execution, i.e., remove all instruction instances that are not reachable by the branch/jump taken in {\it instruction\_tree}; and
 \item record the instruction as finished, i.e., set {\it finished} to {\it true}.
 \end{enumerate}
 
