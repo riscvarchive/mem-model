@@ -625,7 +625,7 @@ A non-finished instruction instance $i$ in state {\sc Plain}({\sc Done}) can be 
   Here, a memory store operation is called fixed if the store instruction has fully determined data.
   \end{enumerate}
 \item $i$ has a fully determined data; and
-\item all program-order-previous conditional branch and indirect jump instructions are finished.
+\item if $i$ is not a fence, all program-order-previous conditional branch and indirect jump instructions are finished.
 \end{enumerate}
 Action:
 \begin{enumerate}
