@@ -103,7 +103,6 @@ Instead, the model depends on an external oracle that provides an opcode when gi
 %
 
 
-%\fixme{why is Fetch not eager? is it because of loops? is that a good reason? I think fetch should be eager and just add a comment to the description of eager below saying fetching needs some attention}
 \item[$\circ$] \nameref{omm:reg_write}: This is a write of a register value.
 \item[$\circ$] \nameref{omm:reg_read}: This is a read of a register
   value from the most recent program-order-predecessor instruction instance that writes to that register.
@@ -139,9 +138,9 @@ But, under some conditions, the model might treat a load instruction as non-rest
 \noindent Transitions specific to {\em  sc} instructions:
 \begin{itemize}
 \item \nameref{omm:early_sc_fail}: This causes the {\em sc} to fail early, either a spontaneous fail or because it is not paired with a program-order-previous {\em lr}.
-\item \nameref{omm:paired_sc}: This is an alternative to \nameref{omm:early_sc_fail}, indicating the {\em sc} is paired with an {\em lr} and might succeed. \fixme{after which the {\em sc} will fail only if the atomicity with the paired {\em lr} is violated.}
+\item \nameref{omm:paired_sc}: This is an alternative to \nameref{omm:early_sc_fail}, indicating the {\em sc} is paired with an {\em lr} and might succeed.
 \item \nameref{omm:commit_sc}: This is an atomic execution of the transitions \nameref{omm:commit_stores} and \nameref{omm:prop_store}.
-\item \nameref{omm:late_sc_fail}: This is an alternative to \nameref{omm:commit_sc}. \fixme{eager?}
+\item \nameref{omm:late_sc_fail}: This is an alternative to \nameref{omm:commit_sc}.
 \end{itemize}
 
 \noindent Transitions specific to AMO instructions:
@@ -334,7 +333,7 @@ A possible program-order-successor of instruction instance $i$ can be fetched fr
   \item for any other instruction, $i.\textit{program\_loc}+4$.
   \end{itemize}
 \end{enumerate}
-\fixme{Does an instruction at the end of memory need special-case treatment?}
+% \fixme{Does an instruction at the end of memory need special-case treatment?}
 
 Action: construct a freshly initialized instruction instance $i'$ for the instruction in the program memory at {\it loc}, with state {\sc Plain}({\it next\_state}), computed from the instruction pseudocode, including the static information available from the pseudocode such as its {\it instruction\_kind}, {\it src\_regs}, and {\it dst\_regs}, and add $i'$ to the hart's {\it instruction\_tree} as a successor of $i$.
 % If the instruction fails to decode, set the state of $i'$ to ``{\sc Pending\_exception} {\it exception}'' with {\it exception} that describes the decoding error.
