@@ -376,8 +376,10 @@ For a non-AMO load instruction instance $i$ in state {\sc Pending\_mem\_loads}({
 \begin{enumerate}
 \item all program-order-previous {\em fence} instructions with {\em .sr} set are finished;
 % \item all program-order-previous {\em fence.i} instructions are finished;
-\item if $i$ is a load-acquire-RCsc, all program-order-previous store-releases-RCsc are finished; and
-\item all non-finished program-order-previous load-acquire instructions are entirely satisfied.
+\item if $i$ is a load-acquire-RCsc, all program-order-previous store-releases-RCsc are finished;
+\item if $i$ is a load-acquire-release, all program-order-previous instructions are finished;
+\item all non-finished program-order-previous load-acquire instructions are entirely satisfied; and
+\item all program-order-previous store-acquire-release instructions are finished;
 \end{enumerate}
 
 Let $msoss$ be the set of all unpropagated memory store operation slices from non-{\em sc} store instruction instances that are program-order-before $i$ and have already calculated the value to be stored, that overlap with the unsatisfied slices of $mlo$, and which are not superseded by intervening stores operations or store operations that are read from by an intervening loads.
@@ -415,8 +417,10 @@ For an instruction instance $i$ of a non-AMO load instruction or an AMO instruct
 \begin{enumerate}
 \item all program-order-previous {\em fence} instructions with {\em .sr} set are finished;
 % \item all program-order-previous {\em fence.i} instructions are finished;
-\item if $i$ is a load-acquire-RCsc, all program-order-previous store-releases-RCsc are finished; and
-\item all non-finished program-order-previous load-acquire instructions are entirely satisfied.
+\item if $i$ is a load-acquire-RCsc, all program-order-previous store-releases-RCsc are finished;
+\item if $i$ is a load-acquire-release, all program-order-previous instructions are finished;
+\item all non-finished program-order-previous load-acquire instructions are entirely satisfied; and
+\item all program-order-previous store-acquire-release instructions are finished.
 \end{enumerate}
 Action: let $msoss$ be the memory store operation slices from memory covering the unsatisfied slices of $mlo$, and apply the action of \nameref{omm:sat_by_forwarding}.
 
@@ -477,7 +481,8 @@ An uncommitted instruction instance $i$ of a non-{\em sc} store instruction or a
 \item all program-order-previous {\em fence} instructions with {\em .sw} set are finished;
 % \item all program-order-previous {\em fence.i} instructions are finished;
 \item all program-order-previous load-acquire instructions are finished;
-\item  if $i$ is a store-release, all program-order-previous memory access instructions are finished;
+\item all program-order-previous store-acquire-release instructions are finished;
+\item  if $i$ is a store-release, all program-order-previous instructions are finished;
 \item\label{omm:commit_store:prev_addrs} all program-order-previous memory access instructions have a fully determined memory footprint;
 \item\label{omm:commit_store:prev_stores} all program-order-previous store instructions, except for {\em sc} that failed, have initiated and so have non-empty {\it mem\_stores}; and
 \item\label{omm:commit_store:prev_loads} all program-order-previous load instructions have initiated and so have non-empty {\it mem\_loads}.
@@ -619,7 +624,7 @@ A non-finished instruction instance $i$ in state {\sc Plain}({\sc Done}) can be 
     \item $i'$ has no unpropagated memory store operations that overlap with $\overline{\textit{cfp}}$; and
     \item if $i'$ is a load with a memory footprint that overlaps with $\overline{\textit{cfp}}$, then all the memory load operations of $i'$ that overlap with $\overline{\textit{cfp}}$ are satisfied and $i'$ is {\em non-restartable} (see the \nameref{omm:prop_store} transition for how to determined if an instruction is non-restartable).
     \end{enumerate}
-  Here, a memory store operation is called fixed if the store instruction has fully determined data and address.
+  Here, a memory store operation is called fixed if the store instruction has fully determined data.
   \end{enumerate}
 \item $i$ has a fully determined data; and
 \item all program-order-previous conditional branch and indirect jump instructions are finished.
