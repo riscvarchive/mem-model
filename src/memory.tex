@@ -576,7 +576,7 @@ Fortunately, this situation and others like it are prevented by the fact that RV
 \end{figure}
 
 PPO rules~\ref{ppo:addrdatarfi} and \ref{ppo:addrpo} reflect behaviors of almost all real processor pipeline implementations.
-Rule~\ref{ppo:addrdatarfi} states that a load forward from a store until the address and data for that store are known.
+Rule~\ref{ppo:addrdatarfi} states that a load cannot forward from a store until the address and data for that store are known.
 Consider Figure~\ref{fig:litmus:addrdatarfi}:
 (c) cannot be executed until the data for (b) has been resolved, because (c) must return the value written by (b) (or by something even later in the global memory order), and the old value must not be clobbered by the writeback of (b) before (a) has had a chance to perform.  Therefore, (c) will never perform before (a) has performed.
 
@@ -629,11 +629,13 @@ Consider Figure~\ref{fig:litmus:addrpo}:
 In this section, we provide an informal description of how the {\tt fence.i}, {\tt sfence.vma}, I/O fences, and PMAs interact with the memory model.
 
 Instruction fetches and address translation operations (where applicable) informally follow the RISC-V memory model as well as the rules below.
+
+\textcolor{red}{\bf DL: this is new, please check!}
 \begin{itemize}
-  \item {\tt fence.i}: Conceptually, {\tt fence.i} ensures that the fetch of each instruction following the {\tt fence.i} in program order appears later in the global memory order than all stores prior to the {\tt fence.i} in program order.
-    That in turn means that instruction caches that hardware does not keep coherent with normal memory must be invalidated when a {\tt fence.i} instruction is executed.
-  \item {\tt sfence.vma}: Conceptually, the address translation operations of each instruction following the {\tt sfence.vma} in program order appear later in the global memory order than all stores prior to the {\tt sfence.vma} in program order.
-    This implies that stale entries in the local hart's TLBs must be invalidated.
+  \item {\tt fence.i}: Conceptually, an instruction fetch behaves as if it were a load to the same address, of the same size, and located anywhere in program order between its original location and the location of the most recent {\tt fence.i} preceding the instruction being fetched in program order.
+    This means that instruction caches and/or pipelines that hardware does not keep coherent with normal memory must be invalidated/flushed when a {\tt fence.i} instruction is executed.
+  \item {\tt sfence.vma}: Conceptually, each virtual-to-physical address translation for an instruction behaves as if it were a load to the address of the relevant page table entry located anywhere in program order between the associated instruction and the location of the most recent {\tt sfence.vma} preceding the instruction being fetched in program order.
+    This means that TLBs and/or other paging caches that hardware does not keep coherent with normal memory must be invalidated when a {\tt sfence.vma} instruction is executed.
   \item Conceptually, updates to the page table made by a hardware page table walker must be atomic, in the sense of obeying the Atomicity Axiom (or stronger)
 \end{itemize}
 
