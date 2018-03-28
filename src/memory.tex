@@ -701,39 +701,202 @@ I/O regions in the address space should be considered non-cacheable regions in t
 
 The ordering guarantees in this section may not apply beyond a platform-specific boundary between the RISC-V cores and the device.  In particular, I/O accesses sent across an external bus (e.g., PCIe) may be reordered before they reach their ultimate destination.  Ordering must be enforced in such situations according to the platform-specific rules of those external devices and buses.
 
-\section{Code Porting Guidelines}
+\section{Code Porting and Mapping Guidelines}
 \label{sec:porting}
 
+\begin{table}[h!]
+  \centering
+  \begin{tabular}{|l|l|}
+    \hline
+    x86/TSO Operation & RVWMO Mapping \\
+    \hline
+    \hline
+    Load              & \tt l\{b|h|w|d\}; fence r,rw               \\
+    \hline
+    Store             & \tt fence rw,w; s\{b|h|w|d\}               \\
+    \hline
+    Atomic RMW        & \tt amo<op>.\{w|d\}.aqrl \textrm{OR} lr.\{w|d\}.aq; <op>; sc.\{w|d\}.aqrl \\
+    \hline
+    Fence             & \tt fence rw,rw \\
+    \hline
+  \end{tabular}
+  \caption{Mappings from TSO operations to RISC-V operations}
+  \label{tab:tsomappings}
+\end{table}
+
+Table~\ref{tab:tsomappings} provides a mapping from TSO memory operations onto RISC-V memory instructions.
 Normal x86 loads and stores are all inherently acquire-RCpc and release-RCpc operations: TSO enforces all load-load, load-store, and store-store ordering by default.
-All TSO loads must be mapped onto {\tt l\{b|h|w|d\}; fence r,rw}, and all TSO stores must either be mapped onto {\tt amoswap.rl x0} or onto {\tt fence rw,w; s\{b|h|w|d\}}.
-%Alternatively, TSO loads and stores can be mapped onto {\tt l\{b|h|w|d\}.aq} and {\tt s\{b|h|w|d\}.rl} assembler pseudoinstructions to facilitate forwards compatibility in case such instructions are added to the ISA one day.
-%However, in the meantime, the assembler will generate the same fence-based and/or {\tt amoswap}-based versions for these pseudoinstructions.
-x86 atomics using the LOCK prefix are all sequentially consistent and when ported naively to RISC-V must be marked as {\tt .aqrl}.
-
-A Power {\tt sync}/{\tt hwsync} fence, an ARM {\tt dmb} fence, and an x86 {\tt mfence} are all equivalent to a RISC-V {\tt fence rw,rw}.
-Power {\tt isync} and ARM {\tt isb} map to RISC-V {\tt fence.i; fence r,r}; the latter fence is needed because {\tt isync} and {\tt isb} are used to define a {\em control+control fence} dependency that is not present in RVWMO.
-A Power {\tt lwsync} map onto {\tt fence.tso}, or onto either {\tt fence rw,rw} or {\tt fence rw,w; fence r,r} when {\tt fence.tso} is not available.
-ARM {\tt dmb ld} and {\tt dmb st} fences map to RISC-V {\tt fence r,rw} and {\tt fence w,w}, respectively.
-
-Since RISC-V does not currently have {\tt l\{b|h|w|d\}.aq[rl]} or  {\tt s\{b|h|w|d\}.[aq]rl} opcodes, ARM load-acquire and store-release operations should be mapped onto {\tt l\{b|h|w|d\}; fence r,rw} and {fence rw,w; \tt s\{b|h|w|d\}}, respectively.
-
-Note however that there is a small incompatibility between the ARMv8 memory model and RVWMO: ARMv8 also forbids forwarding of values from a successful store conditional instruction to a subsequent load-acquire instruction.
-Therefore, strict theoretical compatibility with the ARMv8 memory model requires either that all ARM store-conditional instructions map to {\tt sc.aqrl} or that ARM load-acquire operations map to {\tt fence rw,rw; l\{b|h|w|d\}; fence r,rw} (i.e., with the leading {\tt fence rw,rw}).
-However, in practice, the software requirement that this ARMv8 rule is intended to address is covered instead by other RVWMO properties; namely, the fact that all paired operations are data-dependent and the fact that AMOs behave as a single operation.
-It should therefore generally be safe to elide this latter strict compatibility requirement.
-
-The Linux fences {\tt smp\_mb()}, {\tt smp\_wmb()}, {\tt smp\_rmb()} map onto {\tt fence rw,rw}, {\tt fence w,w}, and {\tt fence r,r}, respectively.
-%The now-deprecated fence {\tt smp\_read\_barrier\_depends()} map to a no-op due to preserved program order rules \ref{ppo:addr}--\ref{ppo:ctrl}.
-The Linux fences {\tt dma\_rmb()} and {\tt dma\_wmb()} map onto {\tt fence r,r} and {\tt fence w,w}, respectively, since the RISC-V Unix Platform requires coherent DMA.
-The Linux fences {\tt rmb()}, {\tt wmb()}, and {\tt mb()} map onto {\tt fence ri,ri}, {\tt fence wo,wo}, and {\tt fence rwio,rwio}, respectively.
-
-Linux acquire atomic operations can be implemented either by following the relevant AMO or LR/SC pair with a {\tt fence r,rw} or by using an AMO with {\tt .aq} set.
-Linux release atomic operations can be implemented either by preceding the relevant AMO or LR/SC pair with a {\tt fence rw,w} or by using an AMO with {\tt .rl} set.
-Linux fully-ordered atomic operations can be implemented by both preceding the relevant AMO or LR/SC pair with a {\tt fence rw,w} and following the relevant AMO or LR/SC pair with a {\tt fence rw,rw}, by using an AMO with both {\tt .aq} and {\tt .rl} set, or by using an LR/SC pair where the LR has {\tt .aq} set and the SC has both {\tt .aq} and {\tt .rl} set.
-However, for any given memory location, mappings using {\tt .aq} and {\tt .rl} should not be mixed with mappings using fences.
-As of the time this text is being written, the Linux Kernel Memory Model requires some memory accesses in one critical section to be ordered before some memory accesses in a subsequent critical section that is in the same thread and protected by the same lock, and the mixed mappings do not provide all of the necessary guarantees.
+Therefore, under RVWMO, all TSO loads must be mapped onto {\tt l\{b|h|w|d\}; fence r,rw}, and all TSO stores must either be mapped onto {\tt amoswap.\{w|d\}.rl~x0} or onto {\tt fence rw,w; s\{b|h|w|d\}}.
+TSO atomic read-modify-writes and x86 instructions using the LOCK prefix are fully-ordered and can be implemented either with {\tt amo<op>.aqrl} or {\tt lr.aq; <op>; sc.aqrl}.
+In the latter case, the {\tt .rl} annotation on the {\tt lr} is redundant and can be omitted.
 
 \begin{table}[h!]
+  \centering
+  \begin{tabular}{|l|l|}
+    \hline
+    Power Operation & RVWMO Mapping \\
+    \hline
+    \hline
+    Load              & \tt l\{b|h|w|d\}  \\
+    \hline
+    Load-Reserve      & \tt lr.\{w|d\}  \\
+    \hline
+    Store             & \tt s\{b|h|w|d\}  \\
+    \hline
+    Store-Conditional & \tt sc.\{w|d\}  \\
+    \hline
+    \tt lwsync        & \tt fence.tso \\
+    \hline
+    \tt sync          & \tt fence rw,rw \\
+    \hline
+    \tt isync         & \tt fence.i; fence r,r \\
+    \hline
+  \end{tabular}
+  \caption{Mappings from Power operations to RISC-V operations}
+  \label{tab:powermappings}
+\end{table}
+
+Table~\ref{tab:powermappings} provides a mapping from Power memory operations onto RISC-V memory instructions.
+Power {\tt isync} maps to RISC-V {\tt fence.i; fence r,r}; the latter fence is needed because {\tt isync} is used to define a ``control+control fence'' dependency that is not present in RVWMO.
+
+\begin{table}[h!]
+  \centering
+  \begin{tabular}{|l|l|}
+    \hline
+    ARM Operation             & RVWMO Mapping \\
+    \hline
+    \hline
+    Load                      & \tt l\{b|h|w|d\}  \\
+    \hline
+    Load-Acquire              & \tt l\{b|h|w|d\}; fence r,rw  \\
+    \hline
+    Load-Reserve              & \tt lr.\{w|d\}  \\
+    \hline
+    Load-Reserve-Acquire      & \tt lr.\{w|d\}.aq \\
+    \hline
+    Store                     & \tt s\{b|h|w|d\}  \\
+    \hline
+    Store-Release             & \tt fence rw,w; s\{b|h|w|d\}  \\
+    \hline
+    Store-Conditional         & \tt sc.\{w|d\}  \\
+    \hline
+    Store-Conditional-Release & \tt sc.\{w|d\}.rl  \\
+    \hline
+    \tt dmb                   & \tt fence rw,rw \\
+    \hline
+    \tt dmb.ld                & \tt fence r,rw \\
+    \hline
+    \tt dmb.st                & \tt fence w,w \\
+    \hline
+    \tt isb                   & \tt fence.i; fence r,r \\
+    \hline
+  \end{tabular}
+  \caption{Mappings from ARM operations to RISC-V operations}
+  \label{tab:armmappings}
+\end{table}
+
+Table~\ref{tab:armmappings} provides a mapping from ARM memory operations onto RISC-V memory instructions.
+Since RISC-V does not currently have {\tt l\{b|h|w|d\}.aq[rl]} or  {\tt s\{b|h|w|d\}.[aq]rl} opcodes, ARM load-acquire and store-release operations should be mapped onto {\tt l\{b|h|w|d\}; fence r,rw} and {\tt fence rw,w; s\{b|h|w|d\}}, respectively.
+ARM load-reserved and store-conditional instructions can likewise map onto their RISC-V {\tt lr} and {\tt sc} equivalents.
+ARM {\tt isb} maps to RISC-V {\tt fence.i;~fence~r,r} similarly to how {\tt isync} maps for Power.
+
+\begin{table}[h!]
+  \centering
+  \begin{tabular}{|l|l|}
+    \hline
+    Linux Operation           & RVWMO Mapping \\
+    \hline
+    \hline
+    \tt smp\_mb()             & \tt fence rw,rw \\
+    \hline
+    \tt smp\_rmb()            & \tt fence r,r \\
+    \hline
+    \tt smp\_wmb()            & \tt fence w,w \\
+    \hline
+    \tt dma\_rmb()            & \tt fence r,r \textrm{(if DMA is coherent)} \\
+    \hline
+    \tt dma\_wmb()            & \tt fence w,w \textrm{(if DMA is coherent)} \\
+    \hline
+    \tt dma\_rmb()            & \tt fence ri,ri \textrm{(if DMA is not coherent)} \\
+    \hline
+    \tt dma\_wmb()            & \tt fence wo,wo \textrm{(if DMA is not coherent)} \\
+    \hline
+    \tt mb()                  & \tt fence iorw,iorw \\
+    \hline
+    \tt rmb()                 & \tt fence ri,ri \\
+    \hline
+    \tt wmb()                 & \tt fence wo,wo \\
+    \hline
+  \end{tabular}
+
+  ~
+
+  \begin{tabular}{|l|l|l|}
+    \hline
+    Linux Construct            & RISC-V Mapping               & Hypothetical Alternative Mapping \\
+    \hline
+    \tt smp\_load\_acquire()   & \tt l\{b|h|w|d\}; fence r,rw & \tt l\{b|h|w|d\}.aq \\
+    \hline
+    \tt smp\_store\_release()  & \tt fence.tso; s\{b|h|w|d\}  & \tt fence w,w; s\{b|h|w|d\}.rl\\
+    \hline
+  \end{tabular}
+
+  ~
+
+  \begin{tabular}{|l|l|l|}
+    \hline
+    Linux Construct            & RISC-V AMO Mapping       & RISC-V LR/SC Mapping\\
+    \hline
+    \tt atomic\_<op>\_relaxed  & \tt amo<op>.\{w|d\}      & \tt lr.\{w|d\};~~~ <op>; sc.\{w|d\} \\
+    \hline
+    \tt atomic\_<op>\_acquire  & \tt amo<op>.\{w|d\}.aq   & \tt lr.\{w|d\}.aq; <op>; sc.\{w|d\} \\
+    \hline
+    \tt atomic\_<op>\_release  & \tt amo<op>.\{w|d\}.rl   & \tt lr.\{w|d\};~~~ <op>; sc.\{w|d\}.rl \\
+    \hline
+    \tt atomic\_<op>           & \tt amo<op>.\{w|d\}.aqrl & \tt lr.\{w|d\}.aq; <op>; sc.\{w|d\}.aqrl \\
+    \hline
+  \end{tabular}
+  \caption{Mappings from Linux memory primitives to RISC-V primitives.  Other constructs (such as spinlocks) should follow accordingly.}
+  \label{tab:linuxmappings}
+\end{table}
+
+Table~\ref{tab:linuxmappings} provides a mapping of Linux memory ordering macros onto RISC-V memory instructions.
+%The now-deprecated fence {\tt smp\_read\_barrier\_depends()} map to a no-op due to preserved program order rules \ref{ppo:addr}--\ref{ppo:ctrl}.
+The Linux fences {\tt dma\_rmb()} and {\tt dma\_wmb()} map onto {\tt fence r,r} and {\tt fence w,w}, respectively, since the RISC-V Unix Platform requires coherent DMA, but would be mapped onto {\tt fence ri,ri} and {\tt fence wo,wo}, respectively, on a platform with non-coherent DMA.
+
+\begin{figure}[h!]
+  \centering\small
+  \begin{verbbox}
+Linux code:
+(a)  int r0 = *x;
+(bc) spin_unlock(y, 0);
+     ...
+     ...
+(d)  spin_lock(y);
+(e)  int r1 = *z;
+  \end{verbbox}
+  \theverbbox
+  ~~~~~~~~~~
+  \begin{verbbox}
+RISC-V Mapping:
+(a) lw           a0, 0(s0)
+(b) fence.tso  // vs. fence rw,w
+(c) sd           x0,0(s1)
+    ...
+(d) amoswap.d.aq a1,t1,0(s1)
+(e) lw           a2,0(s2)
+  \end{verbbox}
+  \theverbbox
+  \caption{Orderings between critical sections in Linux}
+  \label{fig:litmus:lkmm_ll}
+\end{figure}
+The Linux mappings for {\tt smp\_store\_release()} may seem stronger than necessary, but these are needed to cover some cases in which Linux has slightly stronger requirements than RCpc.
+For example, there is a proposal as of the time of writing that Linux should require (a) to be ordered before (e) in Figure~\ref{fig:litmus:lkmm_ll}.
+If that will indeed be required, then it would be insufficient for (b) to map as {\tt fence rw,w}.
+That said, these mappings are subject to change as the Linux Kernel Memory Model evolves.
+
+\begin{table}[h!]
+  \centering
   \begin{tabular}{|l|l|}
     \hline
     C/C++ Construct                            & RVWMO Mapping \\
@@ -763,26 +926,104 @@ As of the time this text is being written, the Linux Kernel Memory Model require
     \hline
     \tt atomic\_thread\_fence(memory\_order\_release)  & \tt fence rw,w \\
     \hline
-    \tt atomic\_thread\_fence(memory\_order\_acq\_rel) & {\tt fence.tso} or {\tt fence rw,w; fence r,r} \\
+    \tt atomic\_thread\_fence(memory\_order\_acq\_rel) & {\tt fence.tso} \\
     \hline
     \tt atomic\_thread\_fence(memory\_order\_seq\_cst) & \tt fence rw,rw \\
     \hline
   \end{tabular}
+
+~
+
+  \footnotesize\centering
+  \begin{tabular}{|l|l|l|}
+    \hline
+    C/C++ Construct                               & RISC-V AMO Mapping       & RISC-V LR/SC Mapping\\
+    \hline
+    \tt atomic\_<op>(memory\_order\_relaxed)  & \tt amo<op>.\{w|d\}      & \tt lr.\{w|d\}; <op>; sc.\{w|d\} \\
+    \hline
+    \tt atomic\_<op>(memory\_order\_acquire)  & \tt amo<op>.\{w|d\}.aq   & \tt lr.\{w|d\}.aq; <op>; sc.\{w|d\} \\
+    \hline
+    \tt atomic\_<op>(memory\_order\_release)  & \tt amo<op>.\{w|d\}.rl   & \tt lr.\{w|d\}; <op>; sc.\{w|d\}.rl \\
+    \hline
+    \tt atomic\_<op>(memory\_order\_acq\_rel) & \tt amo<op>.\{w|d\}.aqrl & \tt lr.\{w|d\}.aq; <op>; sc.\{w|d\}.rl \\
+    \hline
+    \tt atomic\_<op>(memory\_order\_seq\_cst) & \tt amo<op>.\{w|d\}.aqrl & \tt lr.\{w|d\}.aqrl; <op>; sc.\{w|d\}.rl \\
+    \hline
+  \end{tabular}
   \caption{Mappings from C/C++ primitives to RISC-V primitives.}
-  \label{tab:mappings}
+  \label{tab:c11mappings}
 \end{table}
 
-The C11/C++11 {\tt memory\_order\_*} primitives should be mapped as shown in Table~\ref{tab:mappings}.
+\begin{table}[h!]
+  \centering
+  \begin{tabular}{|l|l|}
+    \hline
+    C/C++ Construct                            & RVWMO Mapping \\
+    \hline
+    \hline
+    Non-atomic load                            & \tt l\{b|h|w|d\}               \\
+    \hline
+    \tt atomic\_load(memory\_order\_relaxed)   & \tt l\{b|h|w|d\}               \\
+    \hline
+    \tt atomic\_load(memory\_order\_acquire)   & \tt l\{b|h|w|d\}.aq  \\
+    \hline
+    \tt atomic\_load(memory\_order\_seq\_cst)  & \tt l\{b|h|w|d\}.aq  \\
+    \hline
+    \hline
+    Non-atomic store                           & \tt s\{b|h|w|d\}               \\
+    \hline
+    \tt atomic\_store(memory\_order\_relaxed)  & \tt s\{b|h|w|d\}               \\
+    \hline
+    \tt atomic\_store(memory\_order\_release)  & \tt s\{b|h|w|d\}.rl  \\
+    \hline
+    \tt atomic\_store(memory\_order\_seq\_cst) & \tt s\{b|h|w|d\}.rl \\
+    \hline
+    \hline
+    \tt atomic\_thread\_fence(memory\_order\_acquire)  & \tt fence r,rw \\
+    \hline
+    \tt atomic\_thread\_fence(memory\_order\_release)  & \tt fence rw,w \\
+    \hline
+    \tt atomic\_thread\_fence(memory\_order\_acq\_rel) & {\tt fence.tso} \\
+    \hline
+    \tt atomic\_thread\_fence(memory\_order\_seq\_cst) & \tt fence rw,rw \\
+    \hline
+  \end{tabular}
 
-The acquire-RCsc annotation can be emulated via fences by following the relevant AMO or LR/SC pair with a {\tt fence r,rw}.
-The release-RCsc can be emulated via fences by preceding the relevant AMO or LR/SC pair with a {\tt fence rw,w}.
-A combined acquire-RCsc and release-RCsc annotation can be emulated via fences by both preceding the relevant AMO or LR/SC pair with a {\tt fence rw,w} and following the relevant AMO or LR/SC pair with a {\tt fence rw,rw}.
+~
+
+  \footnotesize
+  \begin{tabular}{|l|l|l|}
+    \hline
+    C/C++ Construct                               & RISC-V AMO Mapping       & RISC-V LR/SC Mapping\\
+    \hline
+    \tt atomic\_<op>(memory\_order\_relaxed)  & \tt amo<op>.\{w|d\}      & \tt lr.\{w|d\}; <op>; sc.\{w|d\} \\
+    \hline
+    \tt atomic\_<op>(memory\_order\_acquire)  & \tt amo<op>.\{w|d\}.aq   & \tt lr.\{w|d\}.aq; <op>; sc.\{w|d\} \\
+    \hline
+    \tt atomic\_<op>(memory\_order\_release)  & \tt amo<op>.\{w|d\}.rl   & \tt lr.\{w|d\}; <op>; sc.\{w|d\}.rl \\
+    \hline
+    \tt atomic\_<op>(memory\_order\_acq\_rel) & \tt amo<op>.\{w|d\}.aqrl & \tt lr.\{w|d\}.aq; <op>; sc.\{w|d\}.rl \\
+    \hline
+    \tt atomic\_<op>(memory\_order\_seq\_cst) & \tt amo<op>.\{w|d\}.aqrl & \tt lr.\{w|d\}.aq$^*$; <op>; sc.\{w|d\}.rl \\
+    \hline
+    \multicolumn{3}{l}{$^*$must be {\tt lr.\{w|d\}.aqrl} in order to interoperate with code mapped per Table~\ref{tab:c11mappings}}
+  \end{tabular}
+  \caption{Hypothetical mappings from C/C++ primitives to RISC-V primitives, if native load-acquire and store-release opcodes are introduced.}
+  \label{tab:c11mappings_hypothetical}
+\end{table}
+
+Table~\ref{tab:c11mappings} provides a mapping of C11/C++11 atomic operations onto RISC-V memory instructions.
+If {\tt l\{b|h|w|d\}.aq[rl]} and {\tt s\{b|h|w|d\}.[aq]rl} opcodes are introduced, then the mappings in Figure~\ref{tab:c11mappings_hypothetical} will suffice.
+Note however that the two mappings only interoperate correctly when the original LR/SC mapping of {\tt atomic\_<op>(memory\_order\_seq\_cst)} onto {\tt lr.\{w|d\}.aqrl;~<op>;~sc.\{w|d\}.rl} is used.
+
+%The acquire-RCsc annotation can be emulated via fences by following the relevant AMO or LR/SC pair with a {\tt fence r,rw}.
+%The release-RCsc annotation can be emulated via fences by preceding the relevant AMO or LR/SC pair with a {\tt fence rw,w}.
+%A combined acquire-RCsc and release-RCsc annotation can be emulated via fences by both preceding the relevant AMO or LR/SC pair with a {\tt fence rw,w} and following the relevant AMO or LR/SC pair with a {\tt fence rw,rw}.
 
 Any AMO can be emulated by an LR/SC pair, but care must be taken to ensure that any PPO orderings that originate from the LR are also made to originate from the SC, and that any PPO orderings that terminate at the SC are also made to terminate at the LR.
 For example, the LR must also be made to respect any data dependencies that the AMO has, given that load operations do not otherwise have any notion of a data dependency.
-Likewise, the effect a {\tt fence r,r} elsewhere in the thread must also be made to apply to the SC, which would not otherwise respect that fence.
-In the general case, this will require preceding the relevant AMO or LR/SC pair with a {\tt fence rw,w} and following the relevant AMO or LR/SC pair with a {\tt fence rw,rw}.
-However, this requirement is likely overkill for many software requirements that would have been satisfied just using an LR/SC pair to begin with.
+Likewise, the effect a {\tt fence r,r} elsewhere in the same hart must also be made to apply to the SC, which would not otherwise respect that fence.
+The emulator may achieve this effect by simply mapping {\tt amo<op>} onto {\tt lr.aq;~<op>;~sc.aqrl}, matching the mapping used elsewhere for fully-ordered atomics.
 
 \section{Implementation Guidelines}
 
