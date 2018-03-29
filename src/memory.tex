@@ -1179,8 +1179,9 @@ let AQ = Acq|AcqRel
 and RL = RelAcqRel
 (* All RCsc *)
 let RCsc = Acq|Rel|AcqRel
-(* Amo events are both R and W *)
+(* Amo events are both R and W, rmw relate paired lr/sc *)
 let AMO = R & W
+let StCond = range(rmw)
 (* Add "artificial" data dependencies, ie paired lr/sc *)
 let data = data | rmw
 
@@ -1191,7 +1192,7 @@ let data = data | rmw
 (* Overlapping-Address Orderings *)
 let r1 = [M];po-loc;[W]
 and r2 = ([R];po-loc-no-w;[R]) \ rsw
-and r3 = [AMO];po-loc;[M]
+and r3 = [AMO|StCond];rfi;[R]
 (* Explicit Synchronization *)
 and r4 = fence
 and r5 = [AQ];po;[M]
