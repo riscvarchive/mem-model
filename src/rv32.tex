@@ -1412,6 +1412,11 @@ An AMO, {\tt lr}, or {\tt sc} instruction with both {\tt .aq} and {\tt .rl} set 
   ``RCpc'' annotations are currently only used when implicitly assigned to every memory access under RVTSO (Section~\ref{sec:tso}).  Furthermore, although the ISA does not currently contain {\tt l\{b|h|w|d\}.aq[rl]} or {\tt s\{b|h|w|d\}.[aq]rl} instructions, nor RCpc variants thereof, the RVWMO model itself is designed to be forwards-compatible with the potential addition of any or all of the above into the ISA in a future extension.
 \end{commentary}
 
+For convenience, we use the term ``acquire annotation'' to refer to either an acquire-RCpc annotation or an acquire-RCsc annotation.
+Likewise, a ``release annotation'' refers to either a release-RCpc annotation or a release-RCsc annotation.
+An ``RCpc annotation'' refers to either an acquire-RCpc annotation or a release-RCpc annotation.
+An ``RCsc annotation'' refers to either an acquire-RCsc annotation or a release-RCsc annotation.
+
 \subsubsection*{Syntactic Dependencies}
 \label{sec:deps}
 The definition of the RVWMO memory model depends in part on the notion of a syntactic dependency, defined as follows.
@@ -1522,7 +1527,7 @@ memory operation $a$ precedes memory operation $b$ in preserved program order (a
 An execution of a RISC-V program obeys the RVWMO memory consistency model only if there exists a memory order conforming to preserved program order and satisfying the {\em load value axiom}, the {\em atomicity axiom}, and the {\em progress axiom}.
 
 \newcommand{\loadvalueaxiom}{
-  Each byte of each load returns the value written to that byte by the store that is the latest in global memory order among the following stores:
+  Each byte of each load $i$ returns the value written to that byte by the store that is the latest in global memory order among the following stores:
   \begin{enumerate}
     \item Stores that write that byte and that precede $i$ in the global memory order
     \item Stores that write that byte and that precede $i$ in program order
@@ -1573,12 +1578,12 @@ RISC-V cores implementing Ztso impose RVTSO onto all memory operations.
 RVTSO behaves just like RVWMO but with the following modifications:
 
 \begin{itemize}
-  \item All load operations behave as if they have (at least) an acquire-RCpc annotation.
-  \item All store operations behave as if they have (at least) a release-RCpc annotation.
+  \item All load operations behave as if they have an acquire annotation
+  \item All store operations behave as if they have a release annotation.
   \item All AMO instructions behave as if they have both acquire-RCsc and release-RCsc annotations.
 \end{itemize}
 
-These rules render all PPO rules except \ref{ppo:fence} and \ref{ppo:rcsc} redundant.
+These rules render all PPO rules except \ref{ppo:fence}--\ref{ppo:rcsc} redundant.
 They also make redundant any non-I/O fences that do not have both {\tt .pw} and {\tt .sr} set.
 Finally, they also imply that all AMO instructions are full two-way fences.
 
