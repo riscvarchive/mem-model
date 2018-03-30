@@ -30,8 +30,8 @@ The online material also contains some litmus tests and some examples of how All
 fun ppo : Event->Event {
   // same-address ordering
   po_loc :> Store
-  + (AMO + StoreConditional) <: po_loc
   + rdw
+  + (AMO + StoreConditional) <: rfi
 
   // explicit synchronization
   + ppo_fence

@@ -721,7 +721,7 @@ Table~\ref{tab:tsomappings} provides a mapping from TSO memory operations onto R
 Normal x86 loads and stores are all inherently acquire-RCpc and release-RCpc operations: TSO enforces all load-load, load-store, and store-store ordering by default.
 Therefore, under RVWMO, all TSO loads must be mapped onto {\tt l\{b|h|w|d\}; fence r,rw}, and all TSO stores must either be mapped onto {\tt amoswap.\{w|d\}.rl~x0} or onto {\tt fence rw,w; s\{b|h|w|d\}}.
 TSO atomic read-modify-writes and x86 instructions using the LOCK prefix are fully-ordered and can be implemented either with {\tt amo<op>.aqrl} or {\tt lr.aq; <op>; sc.aqrl}.
-In the latter case, the {\tt .rl} annotation on the {\tt lr} is redundant and can be omitted.
+In the latter case, the {\tt .rl} annotation on the {\tt lr} turns out (for non-obvious reasons) to be redundant and can be omitted.
 
 \begin{table}[h!]
   \centering
@@ -820,17 +820,9 @@ ARM {\tt isb} maps to RISC-V {\tt fence.i;~fence~r,r} similarly to how {\tt isyn
     \hline
     \tt wmb()                 & \tt fence wo,wo \\
     \hline
-  \end{tabular}
-
-  ~
-
-  \begin{tabular}{|l|l|l|}
+    \tt smp\_load\_acquire()   & \tt l\{b|h|w|d\}; fence r,rw \\
     \hline
-    Linux Construct            & RISC-V Mapping               & Hypothetical Alternative Mapping \\
-    \hline
-    \tt smp\_load\_acquire()   & \tt l\{b|h|w|d\}; fence r,rw & \tt l\{b|h|w|d\}.aq \\
-    \hline
-    \tt smp\_store\_release()  & \tt fence.tso; s\{b|h|w|d\}  & \tt fence w,w; s\{b|h|w|d\}.rl\\
+    \tt smp\_store\_release()  & \tt fence.tso; s\{b|h|w|d\}  \\
     \hline
   \end{tabular}
 
@@ -838,16 +830,17 @@ ARM {\tt isb} maps to RISC-V {\tt fence.i;~fence~r,r} similarly to how {\tt isyn
 
   \begin{tabular}{|l|l|l|}
     \hline
-    Linux Construct            & RISC-V AMO Mapping       & RISC-V LR/SC Mapping\\
+    Linux Construct            & RVWMO AMO Mapping       & RVWMO LR/SC Mapping\\
     \hline
-    \tt atomic\_<op>\_relaxed  & \tt amo<op>.\{w|d\}      & \tt lr.\{w|d\};~~~ <op>; sc.\{w|d\} \\
+    \tt atomic\_<op>\_relaxed  & \tt amo<op>.\{w|d\}      & \tt lr.\{w|d\}; <op>; sc.\{w|d\} \\
     \hline
     \tt atomic\_<op>\_acquire  & \tt amo<op>.\{w|d\}.aq   & \tt lr.\{w|d\}.aq; <op>; sc.\{w|d\} \\
     \hline
-    \tt atomic\_<op>\_release  & \tt amo<op>.\{w|d\}.rl   & \tt lr.\{w|d\};~~~ <op>; sc.\{w|d\}.rl \\
+    \tt atomic\_<op>\_release  & \tt amo<op>.\{w|d\}.rl   & \tt lr.\{w|d\}; <op>; sc.\{w|d\}.aqrl$^*$ \\
     \hline
     \tt atomic\_<op>           & \tt amo<op>.\{w|d\}.aqrl & \tt lr.\{w|d\}.aq; <op>; sc.\{w|d\}.aqrl \\
     \hline
+    \multicolumn{3}{p{0.9\textwidth}}{$^*$an alternative mapping of ``{\tt fence.tso;~lr.\{w|d\};~<op>;~sc.\{w|d\}}'' uses more instructions but may have higher performance on some systems, as {\tt fence.tso} is lighterweight than the implicit full fence in {\tt sc.\{w|d\}.aqrl}.}
   \end{tabular}
   \caption{Mappings from Linux memory primitives to RISC-V primitives.  Other constructs (such as spinlocks) should follow accordingly.}
   \label{tab:linuxmappings}
@@ -856,6 +849,16 @@ ARM {\tt isb} maps to RISC-V {\tt fence.i;~fence~r,r} similarly to how {\tt isyn
 Table~\ref{tab:linuxmappings} provides a mapping of Linux memory ordering macros onto RISC-V memory instructions.
 %The now-deprecated fence {\tt smp\_read\_barrier\_depends()} map to a no-op due to preserved program order rules \ref{ppo:addr}--\ref{ppo:ctrl}.
 The Linux fences {\tt dma\_rmb()} and {\tt dma\_wmb()} map onto {\tt fence r,r} and {\tt fence w,w}, respectively, since the RISC-V Unix Platform requires coherent DMA, but would be mapped onto {\tt fence ri,ri} and {\tt fence wo,wo}, respectively, on a platform with non-coherent DMA.
+
+The Linux mappings for release operations may seem stronger than necessary, but these mappings are needed to cover some cases in which Linux requires stronger orderings than the more intuitive mappings would provide.
+In particular, as of the time this text is being written, Linux is actively debating whether to require load-load, load-store, and store-store orderings between accesses in one critical section and accesses in a subsequent critical section in the same hart and protected by the same synchronization object.
+Not all combinations of {\tt fence rw,w}/{\tt fence r,rw} mappings with {\tt .aq}/{\tt .rl} mappings combine to provide such orderings.
+There are a few ways around this problem, including:
+\begin{enumerate}
+  \item Always use {\tt fence rw,w}/{\tt fence r,rw}, and never use {\tt .aq}/{\tt .rl}.  This suffices but is undesirable, as it defeats the purpose of the {\tt .aq}/{\tt .rl} modifiers.
+  \item Always use {\tt .aq}/{\tt .rl}, and never use {\tt fence rw,w}/{\tt fence r,rw}.  This does not currently work due to the lack of {\tt l\{b|h|w|d\}.aq[rl]} and {\tt s\{b|h|w|d\}.[aq]rl} opcodes.
+  \item Strengthen the mappings of release operations such that they would enforce sufficient orderings in the presence of either type of acquire mapping.  This is the currently-recommended solution, and the one shown in Table~\ref{tab:linuxmappings}.
+\end{enumerate}
 
 \begin{figure}[h!]
   \centering\small
@@ -871,7 +874,7 @@ Linux code:
   \theverbbox
   ~~~~~~~~~~
   \begin{verbbox}
-RISC-V Mapping:
+RVWMO Mapping:
 (a) lw           a0, 0(s0)
 (b) fence.tso  // vs. fence rw,w
 (c) sd           x0,0(s1)
@@ -883,8 +886,8 @@ RISC-V Mapping:
   \caption{Orderings between critical sections in Linux}
   \label{fig:litmus:lkmm_ll}
 \end{figure}
-The Linux mappings for {\tt smp\_store\_release()} may seem stronger than necessary, but these are needed to cover some cases in which Linux has slightly stronger requirements than RCpc.
-For example, there is a proposal as of the time of writing that Linux should require (a) to be ordered before (e) in Figure~\ref{fig:litmus:lkmm_ll}.
+
+For example, the critical section ordering rule currently being debated by the Linux community would require (a) to be ordered before (e) in Figure~\ref{fig:litmus:lkmm_ll}.
 If that will indeed be required, then it would be insufficient for (b) to map as {\tt fence rw,w}.
 That said, these mappings are subject to change as the Linux Kernel Memory Model evolves.
 
@@ -930,7 +933,7 @@ That said, these mappings are subject to change as the Linux Kernel Memory Model
   \footnotesize\centering
   \begin{tabular}{|l|l|l|}
     \hline
-    C/C++ Construct                               & RISC-V AMO Mapping       & RISC-V LR/SC Mapping\\
+    C/C++ Construct                               & RVWMO AMO Mapping       & RVWMO LR/SC Mapping\\
     \hline
     \tt atomic\_<op>(memory\_order\_relaxed)  & \tt amo<op>.\{w|d\}      & \tt lr.\{w|d\}; <op>; sc.\{w|d\} \\
     \hline
@@ -987,7 +990,7 @@ That said, these mappings are subject to change as the Linux Kernel Memory Model
   \footnotesize
   \begin{tabular}{|l|l|l|}
     \hline
-    C/C++ Construct                               & RISC-V AMO Mapping       & RISC-V LR/SC Mapping\\
+    C/C++ Construct                               & RVWMO AMO Mapping       & RVWMO LR/SC Mapping\\
     \hline
     \tt atomic\_<op>(memory\_order\_relaxed)  & \tt amo<op>.\{w|d\}      & \tt lr.\{w|d\}; <op>; sc.\{w|d\} \\
     \hline
