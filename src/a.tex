@@ -57,10 +57,8 @@ observed to take place before any earlier memory operations on this
 RISC-V hart.  If both the {\em aq} and {\em rl} bits are set, the
 atomic memory operation is {\em sequentially consistent} and cannot be
 observed to happen before any earlier memory operations or after any
-later memory operations in the same RISC-V hart, and can only be
-observed by any other hart in the same global order of all
-sequentially consistent atomic memory operations to the same address
-domain.
+later memory operations in the same RISC-V hart and to the same
+address domain.
 
 \begin{commentary}
 Theoretically, the definition of the {\em aq} and {\em rl} bits allows
@@ -211,7 +209,7 @@ that does not run afoul of the forward-progress constraints.
 
 An implementation can reserve an arbitrary subset of the memory space
 on each LR and multiple LR reservations might be active simultaneously
-for a single hart.  An SC can succeed if no accesses from other harts
+for a single hart.  Informally speaking, an SC can succeed if no accesses from other harts
 to the address can be observed to have occurred between the SC and
 the last LR in this hart to reserve the address.  Note this LR might
 have had a different address argument, but reserved the SC's address
@@ -221,7 +219,8 @@ reserved the same location using an alias with a different virtual
 address, but is also allowed to fail if the virtual address is
 different.  The SC must fail if there is an observable memory access
 from another hart to the address, or a preemptive context switch on
-this hart, between the LR and the SC.
+this hart, between the LR and the SC.  The precise atomicity
+requirements are detailed in Section~\ref{sec:rvwmo}.
 
 \begin{commentary}
 The privileged architecture specifies the mechanism by which the
@@ -266,15 +265,15 @@ only take three instructions.
 
 An SC instruction can never be observed by another RISC-V hart
 before the immediately preceding LR.  Due to the atomic nature of the
-LR/SC sequence, no memory operations from any hart can be observed
+LR/SC sequence, no memory operations from another hart can be observed
 to have occurred between the LR and a successful SC.  The LR/SC
 sequence can be given acquire semantics by setting the {\em aq} bit on
 the SC instruction.  The LR/SC sequence can be given release semantics
-by setting the {\em rl} bit on the LR instruction.  Setting both {\em
-  aq} and {\em rl} bits on the LR instruction, and setting the {\em
-  aq} bit on the SC instruction makes the LR/SC sequence sequentially
-consistent with respect to other sequentially consistent atomic
-operations.
+by setting the {\em rl} bit on the LR instruction.  Setting the {\em
+  aq} bit on the LR instruction, and setting both the {\em aq} and the {\em
+  rl} bit on the SC instruction makes the LR/SC sequence sequentially
+consistent, meaning that it cannot be reordered with earlier or
+later memory operations from the same hart.
 
 If neither bit is set on both LR and SC, the LR/SC sequence can be
 observed to occur before or after surrounding memory operations from
@@ -376,7 +375,10 @@ then no later memory operations in this RISC-V hart can be observed
 to take place before the AMO.
 Conversely, if the {\em rl} bit is set, then other
 RISC-V harts will not observe the AMO before memory accesses
-preceding the AMO in this RISC-V hart.
+preceding the AMO in this RISC-V hart.  Setting both the {\em aq} and the {\em
+rl} bit on an AMO makes the it sequence sequentially consistent, meaning that
+it cannot be reordered with earlier or later memory operations from the same
+hart.
 
 \begin{commentary}
 The AMOs were designed to implement the C11 and C++11 memory models
