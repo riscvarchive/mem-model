@@ -520,7 +520,7 @@ An uncommitted {\tt sc} instruction instance $i$, from hart $h$, in state {\sc P
 \begin{enumerate}
 \item the conditions of \nameref{omm:commit_stores} is satisfied;
 \item the conditions of \nameref{omm:prop_store} is satisfied (notice that an {\tt sc} instruction can only have one memory store operation); and
-\item for every store slice $msos$ from $msoss$, that overlaps with the memory footprint of the store operation of $i$, $msos'$ has not been overwritten, in the shared memory, by a store that is from a hart that is not $h$, at any point since $msos'$ was propagated to memory, where $msos'$ is $msos$ reduced to the part that overlaps with the memory footprint of the store operation of $i$.
+\item for every store slice $msos$ from $msoss$, $msos$ has not been overwritten, in the shared memory, by a store that is from a hart that is not $h$, at any point since $msos$ was propagated to memory.
 \end{enumerate}
 Action:
 \begin{enumerate}
