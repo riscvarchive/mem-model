@@ -48,7 +48,7 @@ $^\ddagger$The instruction carries dependencies from source register(s) to desti
    \cline{2-3}
    AUIPC &  & {\em rd} &  \\
    \cline{2-3}
-   JAL$^\dagger$ &  & {\em rd} & \\
+   JAL &  & {\em rd} & \\
    \cline{2-3}
    JALR$^\dagger$ & {\em rs1} & {\em rd} & \\
    \cline{2-3}
@@ -74,11 +74,11 @@ $^\ddagger$The instruction carries dependencies from source register(s) to desti
    \cline{2-3}
    LHU$^\dagger$ & {\em rs1}$^A$ & {\em rd} &  \\
    \cline{2-3}
-   SB$^\dagger$ & {\em rs1}$^D$, {\em rs2}$^A$ &  &  \\
+   SB & {\em rs1}$^A$, {\em rs2}$^D$ &  &  \\
    \cline{2-3}
-   SH$^\dagger$ & {\em rs1}$^D$, {\em rs2}$^A$ &  &  \\
+   SH & {\em rs1}$^A$, {\em rs2}$^D$ &  &  \\
    \cline{2-3}
-   SW$^\dagger$ & {\em rs1}$^D$, {\em rs2}$^A$ &  &  \\
+   SW & {\em rs1}$^A$, {\em rs2}$^D$ &  &  \\
    \cline{2-3}
    ADDI & {\em rs1} & {\em rd} &  \\
    \cline{2-3}
@@ -162,7 +162,7 @@ $^\ddagger$The instruction carries dependencies from source register(s) to desti
    \cline{2-3}
    LD$^\dagger$ & {\em rs1}$^A$ & {\em rd} &  \\
    \cline{2-3}
-   SD$^\dagger$ & {\em rs1}$^D$, {\em rs2}$^A$ &  &  \\
+   SD & {\em rs1}$^A$, {\em rs2}$^D$ &  &  \\
    \cline{2-3}
    SLLI & {\em rs1} & {\em rd} &  \\
    \cline{2-3}
@@ -237,25 +237,25 @@ $^\ddagger$The instruction carries dependencies from source register(s) to desti
   \cline{2-3}
    LR.W$^\dagger$ & {\em rs1}$^A$ & {\em rd} &  \\
    \cline{2-3}
-   SC.W$^\dagger$ & {\em rs1}$^D$, {\em rs2}$^A$ & {\em rd}$^*$ & $^*$if successful \\
+   SC.W$^\dagger$ & {\em rs1}$^A$, {\em rs2}$^D$ & {\em rd}$^*$ & $^*$if successful \\
    \cline{2-3}
-   AMOSWAP.W$^\dagger$ & {\em rs1}$^D$, {\em rs2}$^A$ & {\em rd} &  \\
+   AMOSWAP.W$^\dagger$ & {\em rs1}$^A$, {\em rs2}$^D$ & {\em rd} &  \\
    \cline{2-3}
-   AMOADD.W$^\dagger$ & {\em rs1}$^D$, {\em rs2}$^A$ & {\em rd} &  \\
+   AMOADD.W$^\dagger$ & {\em rs1}$^A$, {\em rs2}$^D$ & {\em rd} &  \\
    \cline{2-3}
-   AMOXOR.W$^\dagger$ & {\em rs1}$^D$, {\em rs2}$^A$ & {\em rd} &  \\
+   AMOXOR.W$^\dagger$ & {\em rs1}$^A$, {\em rs2}$^D$ & {\em rd} &  \\
    \cline{2-3}
-   AMOAND.W$^\dagger$ & {\em rs1}$^D$, {\em rs2}$^A$ & {\em rd} &  \\
+   AMOAND.W$^\dagger$ & {\em rs1}$^A$, {\em rs2}$^D$ & {\em rd} &  \\
    \cline{2-3}
-   AMOOR.W$^\dagger$ & {\em rs1}$^D$, {\em rs2}$^A$ & {\em rd} &  \\
+   AMOOR.W$^\dagger$ & {\em rs1}$^A$, {\em rs2}$^D$ & {\em rd} &  \\
    \cline{2-3}
-   AMOMIN.W$^\dagger$ & {\em rs1}$^D$, {\em rs2}$^A$ & {\em rd} &  \\
+   AMOMIN.W$^\dagger$ & {\em rs1}$^A$, {\em rs2}$^D$ & {\em rd} &  \\
    \cline{2-3}
-   AMOMAX.W$^\dagger$ & {\em rs1}$^D$, {\em rs2}$^A$ & {\em rd} &  \\
+   AMOMAX.W$^\dagger$ & {\em rs1}$^A$, {\em rs2}$^D$ & {\em rd} &  \\
    \cline{2-3}
-   AMOMINU.W$^\dagger$ & {\em rs1}$^D$, {\em rs2}$^A$ & {\em rd} &  \\
+   AMOMINU.W$^\dagger$ & {\em rs1}$^A$, {\em rs2}$^D$ & {\em rd} &  \\
    \cline{2-3}
-   AMOMAXU.W$^\dagger$ & {\em rs1}$^D$, {\em rs2}$^A$ & {\em rd} &  \\
+   AMOMAXU.W$^\dagger$ & {\em rs1}$^A$, {\em rs2}$^D$ & {\em rd} &  \\
    \cline{2-3}
 \end{tabular}
 
@@ -266,25 +266,25 @@ $^\ddagger$The instruction carries dependencies from source register(s) to desti
   \cline{2-3}
    LR.D$^\dagger$ & {\em rs1}$^A$ & {\em rd} &  \\
    \cline{2-3}
-   SC.D$^\dagger$ & {\em rs1}$^D$, {\em rs2}$^A$ & {\em rd}$^*$ & $^*$if successful \\
+   SC.D$^\dagger$ & {\em rs1}$^A$, {\em rs2}$^D$ & {\em rd}$^*$ & $^*$if successful \\
    \cline{2-3}
-   AMOSWAP.D$^\dagger$ & {\em rs1}$^D$, {\em rs2}$^A$ & {\em rd} &  \\
+   AMOSWAP.D$^\dagger$ & {\em rs1}$^A$, {\em rs2}$^D$ & {\em rd} &  \\
    \cline{2-3}
-   AMOADD.D$^\dagger$ & {\em rs1}$^D$, {\em rs2}$^A$ & {\em rd} &  \\
+   AMOADD.D$^\dagger$ & {\em rs1}$^A$, {\em rs2}$^D$ & {\em rd} &  \\
    \cline{2-3}
-   AMOXOR.D$^\dagger$ & {\em rs1}$^D$, {\em rs2}$^A$ & {\em rd} &  \\
+   AMOXOR.D$^\dagger$ & {\em rs1}$^A$, {\em rs2}$^D$ & {\em rd} &  \\
    \cline{2-3}
-   AMOAND.D$^\dagger$ & {\em rs1}$^D$, {\em rs2}$^A$ & {\em rd} &  \\
+   AMOAND.D$^\dagger$ & {\em rs1}$^A$, {\em rs2}$^D$ & {\em rd} &  \\
    \cline{2-3}
-   AMOOR.D$^\dagger$ & {\em rs1}$^D$, {\em rs2}$^A$ & {\em rd} &  \\
+   AMOOR.D$^\dagger$ & {\em rs1}$^A$, {\em rs2}$^D$ & {\em rd} &  \\
    \cline{2-3}
-   AMOMIN.D$^\dagger$ & {\em rs1}$^D$, {\em rs2}$^A$ & {\em rd} &  \\
+   AMOMIN.D$^\dagger$ & {\em rs1}$^A$, {\em rs2}$^D$ & {\em rd} &  \\
    \cline{2-3}
-   AMOMAX.D$^\dagger$ & {\em rs1}$^D$, {\em rs2}$^A$ & {\em rd} &  \\
+   AMOMAX.D$^\dagger$ & {\em rs1}$^A$, {\em rs2}$^D$ & {\em rd} &  \\
    \cline{2-3}
-   AMOMINU.D$^\dagger$ & {\em rs1}$^D$, {\em rs2}$^A$ & {\em rd} &  \\
+   AMOMINU.D$^\dagger$ & {\em rs1}$^A$, {\em rs2}$^D$ & {\em rd} &  \\
    \cline{2-3}
-   AMOMAXU.D$^\dagger$ & {\em rs1}$^D$, {\em rs2}$^A$ & {\em rd} &  \\
+   AMOMAXU.D$^\dagger$ & {\em rs1}$^A$, {\em rs2}$^D$ & {\em rd} &  \\
    \cline{2-3}
 \end{tabular}
 
@@ -293,9 +293,9 @@ $^\ddagger$The instruction carries dependencies from source register(s) to desti
   \cline{2-3}
    & Source Registers & Destination Registers \\
   \cline{2-3}
-   FLW$^\dagger$ & {\em rs1} & {\em rd} &  \\
+   FLW$^\dagger$ & {\em rs1}$^A$ & {\em rd} &  \\
    \cline{2-3}
-   FSW$^\dagger$ & {\em rs1}, {\em rs2} &  &  \\
+   FSW & {\em rs1}$^A$, {\em rs2}$^D$ &  &  \\
    \cline{2-3}
    FMADD.S & {\em rs1}, {\em rs2}, frm$^*$ & {\em rd}, NV$^C$, OF$^C$, UF$^C$, NX$^C$ & $^*$if rm=111 \\
    \cline{2-3}
@@ -313,7 +313,7 @@ $^\ddagger$The instruction carries dependencies from source register(s) to desti
    \cline{2-3}
    FDIV.S & {\em rs1}, {\em rs2}, frm$^*$ & {\em rd}, NV$^C$, DZ$^C$, OF$^C$, UF$^C$, NX$^C$ & $^*$if rm=111 \\
    \cline{2-3}
-   FSQRT.S & {\em rs1}, frm$^*$ & {\em rd}, NV$^C$, DZ$^C$, OF$^C$, UF$^C$, NX$^C$ & $^*$if rm=111 \\
+   FSQRT.S & {\em rs1}, frm$^*$ & {\em rd}, NV$^C$, NX$^C$ & $^*$if rm=111 \\
    \cline{2-3}
    FSGNJ.S & {\em rs1}, {\em rs2} & {\em rd} &  \\
    \cline{2-3}
@@ -321,13 +321,13 @@ $^\ddagger$The instruction carries dependencies from source register(s) to desti
    \cline{2-3}
    FSGNJX.S & {\em rs1}, {\em rs2} & {\em rd} &  \\
    \cline{2-3}
-   FMIN.S & {\em rs1}, {\em rs2} & {\em rd}, NV$^C$, OF$^C$, UF$^C$, NX$^C$ &  \\
+   FMIN.S & {\em rs1}, {\em rs2} & {\em rd}, NV$^C$ &  \\
    \cline{2-3}
-   FMAX.S & {\em rs1}, {\em rs2} & {\em rd}, NV$^C$, OF$^C$, UF$^C$, NX$^C$ &  \\
+   FMAX.S & {\em rs1}, {\em rs2} & {\em rd}, NV$^C$ &  \\
    \cline{2-3}
-   FCVT.W.S & {\em rs1}, frm$^*$ & {\em rd}, NV$^C$ & $^*$if rm=111 \\
+   FCVT.W.S & {\em rs1}, frm$^*$ & {\em rd}, NV$^C$, NX$^C$ & $^*$if rm=111 \\
    \cline{2-3}
-   FCVT.WU.S & {\em rs1}, frm$^*$ & {\em rd}, NV$^C$ & $^*$if rm=111 \\
+   FCVT.WU.S & {\em rs1}, frm$^*$ & {\em rd}, NV$^C$, NX$^C$ & $^*$if rm=111 \\
    \cline{2-3}
    FMV.X.W & {\em rs1} & {\em rd} &  \\
    \cline{2-3}
@@ -339,9 +339,9 @@ $^\ddagger$The instruction carries dependencies from source register(s) to desti
    \cline{2-3}
    FCLASS.S & {\em rs1} & {\em rd} &  \\
    \cline{2-3}
-   FCVT.S.W & {\em rs1}, frm$^*$ & {\em rd}, NV$^C$ & $^*$if rm=111 \\
+   FCVT.S.W & {\em rs1}, frm$^*$ & {\em rd}, NX$^C$ & $^*$if rm=111 \\
    \cline{2-3}
-   FCVT.S.WU & {\em rs1}, frm$^*$ & {\em rd}, NV$^C$ & $^*$if rm=111 \\
+   FCVT.S.WU & {\em rs1}, frm$^*$ & {\em rd}, NX$^C$ & $^*$if rm=111 \\
    \cline{2-3}
    FMV.W.X & {\em rs1} & {\em rd} &  \\
    \cline{2-3}
@@ -352,13 +352,13 @@ $^\ddagger$The instruction carries dependencies from source register(s) to desti
   \cline{2-3}
    & Source Registers & Destination Registers \\
   \cline{2-3}
-   FCVT.L.S & {\em rs1} & {\em rd}, NV$^C$ &  \\
+   FCVT.L.S & {\em rs1} & {\em rd}, NV$^C$, NX$^C$ &  \\
    \cline{2-3}
-   FCVT.LU.S & {\em rs1} & {\em rd}, NV$^C$ &  \\
+   FCVT.LU.S & {\em rs1} & {\em rd}, NV$^C$, NX$^C$ &  \\
    \cline{2-3}
-   FCVT.S.L & {\em rs1} & {\em rd}, NV$^C$ &  \\
+   FCVT.S.L & {\em rs1} & {\em rd}, NX$^C$ &  \\
    \cline{2-3}
-   FCVT.S.LU & {\em rs1} & {\em rd}, NV$^C$ &  \\
+   FCVT.S.LU & {\em rs1} & {\em rd}, NX$^C$ &  \\
    \cline{2-3}
 \end{tabular}
 
@@ -367,9 +367,9 @@ $^\ddagger$The instruction carries dependencies from source register(s) to desti
   \cline{2-3}
    & Source Registers & Destination Registers \\
   \cline{2-3}
-   FLD$^\dagger$ & {\em rs1} & {\em rd} &  \\
+   FLD$^\dagger$ & {\em rs1}$^A$ & {\em rd} &  \\
    \cline{2-3}
-   FSD$^\dagger$ & {\em rs1}, {\em rs2} &  &  \\
+   FSD & {\em rs1}$^A$, {\em rs2}$^D$ &  &  \\
    \cline{2-3}
    FMADD.D & {\em rs1}, {\em rs2}, frm$^*$ & {\em rd}, NV$^C$, OF$^C$, UF$^C$, NX$^C$ & $^*$if rm=111 \\
    \cline{2-3}
@@ -387,7 +387,7 @@ $^\ddagger$The instruction carries dependencies from source register(s) to desti
    \cline{2-3}
    FDIV.D & {\em rs1}, {\em rs2}, frm$^*$ & {\em rd}, NV$^C$, DZ$^C$, OF$^C$, UF$^C$, NX$^C$ & $^*$if rm=111 \\
    \cline{2-3}
-   FSQRT.D & {\em rs1}, frm$^*$ & {\em rd}, NV$^C$, DZ$^C$, OF$^C$, UF$^C$, NX$^C$ & $^*$if rm=111 \\
+   FSQRT.D & {\em rs1}, frm$^*$ & {\em rd}, NV$^C$, NX$^C$ & $^*$if rm=111 \\
    \cline{2-3}
    FSGNJ.D & {\em rs1}, {\em rs2} & {\em rd} &  \\
    \cline{2-3}
@@ -395,13 +395,13 @@ $^\ddagger$The instruction carries dependencies from source register(s) to desti
    \cline{2-3}
    FSGNJX.D & {\em rs1}, {\em rs2} & {\em rd} &  \\
    \cline{2-3}
-   FMIN.D & {\em rs1}, {\em rs2} & {\em rd}, NV$^C$, OF$^C$, UF$^C$, NX$^C$ &  \\
+   FMIN.D & {\em rs1}, {\em rs2} & {\em rd}, NV$^C$ &  \\
    \cline{2-3}
-   FMAX.D & {\em rs1}, {\em rs2} & {\em rd}, NV$^C$, OF$^C$, UF$^C$, NX$^C$ &  \\
+   FMAX.D & {\em rs1}, {\em rs2} & {\em rd}, NV$^C$ &  \\
    \cline{2-3}
-   FCVT.S.D & {\em rs1}, frm$^*$ & {\em rd}, NV$^C$ & $^*$if rm=111 \\
+   FCVT.S.D & {\em rs1}, frm$^*$ & {\em rd}, NX$^C$ & $^*$if rm=111 \\
    \cline{2-3}
-   FCVT.D.S & {\em rs1}, frm$^*$ & {\em rd}, NV$^C$ & $^*$if rm=111 \\
+   FCVT.D.S & {\em rs1}, frm$^*$ & {\em rd}, NX$^C$ & $^*$if rm=111 \\
    \cline{2-3}
    FEQ.D & {\em rs1}, {\em rs2} & {\em rd}, NV$^C$ &  \\
    \cline{2-3}
@@ -411,13 +411,13 @@ $^\ddagger$The instruction carries dependencies from source register(s) to desti
    \cline{2-3}
    FCLASS.D & {\em rs1} & {\em rd} &  \\
    \cline{2-3}
-   FCVT.W.D & {\em rs1}, frm$^*$ & {\em rd}, NV$^C$ & $^*$if rm=111 \\
+   FCVT.W.D & {\em rs1}, frm$^*$ & {\em rd}, NV$^C$, NX$^C$ & $^*$if rm=111 \\
    \cline{2-3}
-   FCVT.WU.D & {\em rs1}, frm$^*$ & {\em rd}, NV$^C$ & $^*$if rm=111 \\
+   FCVT.WU.D & {\em rs1}, frm$^*$ & {\em rd}, NV$^C$, NX$^C$ & $^*$if rm=111 \\
    \cline{2-3}
-   FCVT.D.W & {\em rs1}, frm$^*$ & {\em rd}, NV$^C$ & $^*$if rm=111 \\
+   FCVT.D.W & {\em rs1} & {\em rd} & \\
    \cline{2-3}
-   FCVT.D.WU & {\em rs1}, frm$^*$ & {\em rd}, NV$^C$ & $^*$if rm=111 \\
+   FCVT.D.WU & {\em rs1} & {\em rd} & \\
    \cline{2-3}
 \end{tabular}
 
@@ -426,15 +426,15 @@ $^\ddagger$The instruction carries dependencies from source register(s) to desti
   \cline{2-3}
    & Source Registers & Destination Registers \\
   \cline{2-3}
-   FCVT.L.D & {\em rs1}, frm$^*$ & {\em rd}, NV$^C$ & $^*$if rm=111 \\
+   FCVT.L.D & {\em rs1}, frm$^*$ & {\em rd}, NV$^C$, NX$^C$ & $^*$if rm=111 \\
    \cline{2-3}
-   FCVT.LU.D & {\em rs1}, frm$^*$ & {\em rd}, NV$^C$ & $^*$if rm=111 \\
+   FCVT.LU.D & {\em rs1}, frm$^*$ & {\em rd}, NV$^C$, NX$^C$ & $^*$if rm=111 \\
    \cline{2-3}
    FMV.X.D & {\em rs1} & {\em rd} &  \\
    \cline{2-3}
-   FCVT.D.L & {\em rs1}, frm$^*$ & {\em rd}, NV$^C$ & $^*$if rm=111 \\
+   FCVT.D.L & {\em rs1}, frm$^*$ & {\em rd}, NX$^C$ & $^*$if rm=111 \\
    \cline{2-3}
-   FCVT.D.LU & {\em rs1}, frm$^*$ & {\em rd}, NV$^C$ & $^*$if rm=111 \\
+   FCVT.D.LU & {\em rs1}, frm$^*$ & {\em rd}, NX$^C$ & $^*$if rm=111 \\
    \cline{2-3}
    FMV.D.X & {\em rs1} & {\em rd} &  \\
    \cline{2-3}
