@@ -28,8 +28,8 @@ However, these fences must remain present in the code if compatibility with non-
 \section{Litmus Tests}
 The explanations in this chapter make use of {\em litmus tests}, or small programs designed to test or highlight one particular aspect of a memory model.
 Figure~\ref{fig:litmus:sample} shows an example of a litmus test with two harts.
-As a convention for this figure and for all figures that follow in this chapter, we assume that {\tt s0}--{\tt s2} are pre-set to the same value in all harts and that {\tt s0} holds the address labeled {\tt x}, {\tt s1} holds {\tt y}, and {\tt s2} holds {\tt z}, where {\tt x}, {\tt y}, and {\tt z} are different memory addresses.
-This figure shows the same program twice: on the left in RISC-V assembly, and again on the right in graphical form.
+As a convention for this figure and for all figures that follow in this chapter, we assume that {\tt s0}--{\tt s2} are pre-set to the same value in all harts and that {\tt s0} holds the address labeled {\tt x}, {\tt s1} holds {\tt y}, and {\tt s2} holds {\tt z}, where {\tt x}, {\tt y}, and {\tt z} are disjoint memory locations aligned to 8 byte boundaries.
+Each figure shows the litmus test code on the left, and a visualization of one particular valid or invalid execution on the right.
 
 \begin{figure}[h!]
   \centering
@@ -68,7 +68,8 @@ We analyze this test and many others below.
 In this section, we provide explanation and examples for all of the RVWMO rules and axioms.
 
 \subsection{Preserved Program Order and Global Memory Order}
-Preserved program order represents the set of intra-hart orderings that the hart's pipeline must ensure are maintained as the instructions execute, even in the presence of hardware optimizations that might otherwise reorder those operations.
+Preserved program order represents the subset of program order that must be respected within the global memory order.
+Conceptually, events from the same hart that are ordered by preserved program order must appear in that order from the perspective of other harts and/or observers.
 Events from the same hart that are not ordered by preserved program order, on the other hand, may appear reordered from the perspective of other harts and/or observers.
 
 Informally, the global memory order represents the order in which loads and stores perform.
@@ -144,7 +145,7 @@ memory access $a$ precedes memory access $b$ in preserved program order (and hen
   \item (h) precedes (a): by the load value axiom, as above.
 \end{itemize}
 The global memory order must be a total order and cannot be cyclic, because a cycle would imply that every event in the cycle happens before itself, which is impossible.
-Therefore, the execution proposed above would be forbidden, and hence the addition of rule X would break the memory model.
+Therefore, the execution proposed above would be forbidden, and hence the addition of rule X would forbid implementations with store buffer forwarding, which would clearly be undesirable.
 
 Nevertheless, even if (b) precedes (a) and/or (f) precedes (e) in the global memory order, the only sensible possibility in this example is for (b) to return the value written by (a), and likewise for (f) and (e).  This combination of circumstances is what leads to the second option in the definition of the load value axiom.
 Even though (b) precedes (a) in the global memory order, (a) will still be visible to (b) by virtue of sitting in the store buffer at the time (b) executes.
@@ -168,34 +169,44 @@ AMOs are therefore inherently atomic, while LR/SC pairs are atomic in the slight
 \begin{figure}[h!]
   \centering\small
   \begin{verbbox}
-  (a) lr.d t0, 0(a0)
-  (b) sd   t1, 0(a0)
-  (c) sc.d t2, 0(a0)
+  (a) lr.d a0, 0(s0)
+  (b) sd   t1, 0(s0)
+  (c) sc.d t2, 0(s0)
   \end{verbbox}
   \theverbbox
-%  \caption{Store-conditional (c) may succeed on some implementations}
-%  \label{fig:litmus:lrsdsc}
-%\end{figure}
-%
-%\begin{figure}[h!]
-%  \centering\small
-  ~~~~~~~~~~~~~~~~
+  ~~~~~~
   \begin{verbbox}
-  (a) lr.d t0, 0(a0)
-  (b) sd   t1, 4(a0)
-  (c) sc.d t2, 0(a0)
+  (a) lr.d a0, 0(s0)
+  (b) sw   t1, 4(s0)
+  (c) sc.d t2, 0(s0)
+  \end{verbbox}
+  \theverbbox
+  ~~~~~~
+  \begin{verbbox}
+  (a) lr.w a0, 0(s0)
+  (b) sw   t1, 4(s0)
+  (c) sc.w t2, 0(s0)
+  \end{verbbox}
+  \theverbbox
+  ~~~~~~
+  \begin{verbbox}
+  (a) lr.w a0, 0(s0)
+  (b) sw   t1, 4(s0)
+  (c) sc.w t2, 8(s0)
   \end{verbbox}
   \theverbbox
 %  \caption{Store-conditional (c) may succeed on some implementations}
-  \caption{In both code snippets, the store-conditional (c) may succeed on some implementations}
+  \caption{In all four (independent) code snippets, the store-conditional (c) is permitted but not guaranteed to succeed}
   \label{fig:litmus:lrsdsc}
 \end{figure}
 
 The atomicity axiom does not forbid loads from being interleaved between the paired operations in program order or in the global memory order, nor does it forbid stores from the same hart from appearing between the paired operations in either program order or in the global memory order.
-For example, the sequences in Figure~\ref{fig:litmus:lrsdsc} are legal, and the {\tt sc} instructions may (but are not guaranteed to) succeed.
-%By preserved program order rule \ref{ppo:->st}, the program order of the three operations must be maintained in the global memory order.
-This does not violate the atomicity axiom, because the intervening non-conditional store is from the same hart as the paired load-reserved and store-conditional instructions.
+For example, the {\tt sc} instructions in Figure~\ref{fig:litmus:lrsdsc} may (but are not guaranteed to) succeed.
+None of those successes would violate the atomicity axiom, because the intervening non-conditional stores are from the same hart as the paired load-reserved and store-conditional instructions.
 This way, a memory system that tracks memory accesses at cache line granularity (and which therefore will see the two snippets of Figure~\ref{fig:litmus:lrsdsc} as identical) will not be forced to fail a store conditional instruction that happens to (falsely) share another portion of the same cache line as the memory location being held by the reservation.
+
+The atomicity axiom also technically supports cases in which the {\tt lr} and {\tt sc} touch different addresses and/or use different access sizes; however, use cases for such behaviors are expected to be rare in practice.
+Likewise, scenarios in which stores from the same hart between an {\tt lr}/{\tt sc} pair actually overlap the memory location(s) referenced by the {\tt lr} or {\tt sc} are expected to be rare compared to scenarios where the intervening store may simply fall onto the same cache line.
 
 \subsection{\nameref*{rvwmo:ax:prog}}
 \label{sec:progress}
@@ -248,7 +259,7 @@ However, because the global memory order corresponds to the order in which loads
   }
   ~~~~
   \diagram
-  \caption{Litmus test MP+FENCE+fri-rfi-addr}
+  \caption{Litmus test MP+fence.w.w+fri-rfi-addr}
   \label{fig:litmus:frirfi}
 \end{figure}
 
@@ -365,8 +376,8 @@ Acquire ordering can be enforced in one of two ways: with an acquire annotation,
 \begin{figure}[h!]
   \centering\small
   \begin{verbatim}
-          sd           x1, (a1)     # Random unrelated store
-          ld           x2, (a2)     # Random unrelated load
+          sd           x1, (a1)     # Arbitrary unrelated store
+          ld           x2, (a2)     # Arbitrary unrelated load
           li           t0, 1        # Initialize swap value.
       again:
           amoswap.w.aq t0, t0, (a0) # Attempt to acquire lock.
@@ -375,21 +386,21 @@ Acquire ordering can be enforced in one of two ways: with an acquire annotation,
           # Critical section.
           # ...
           amoswap.w.rl x0, x0, (a0) # Release lock by storing 0.
-          sd           x3, (a3)     # Random unrelated store
-          ld           x4, (a4)     # Random unrelated load
+          sd           x3, (a3)     # Arbitrary unrelated store
+          ld           x4, (a4)     # Arbitrary unrelated load
   \end{verbatim}
   \caption{A spinlock with atomics}
   \label{fig:litmus:spinlock_atomics}
 \end{figure}
 
 Consider Figure~\ref{fig:litmus:spinlock_atomics}.
-Because this example uses {\tt .aq}, the loads and stores in the critical section are guaranteed to appear in the global memory order after the {\tt amoswap} used to acquire the lock.  However, assuming {\tt a0}, {\tt a1}, and {\tt a2} point to different memory locations, the loads and stores in the critical section may or may not appear after the ``random unrelated load'' at the beginning of the example in the global memory order.
+Because this example uses {\tt .aq}, the loads and stores in the critical section are guaranteed to appear in the global memory order after the {\tt amoswap} used to acquire the lock.  However, assuming {\tt a0}, {\tt a1}, and {\tt a2} point to different memory locations, the loads and stores in the critical section may or may not appear after the ``Arbitrary unrelated load'' at the beginning of the example in the global memory order.
 
 \begin{figure}[h!]
   \centering\small
   \begin{verbatim}
-          sd           x1, (a1)     # Random unrelated store
-          ld           x2, (a2)     # Random unrelated load
+          sd           x1, (a1)     # Arbitrary unrelated store
+          ld           x2, (a2)     # Arbitrary unrelated load
           li           t0, 1        # Initialize swap value.
       again:
           amoswap.w    t0, t0, (a0) # Attempt to acquire lock.
@@ -400,8 +411,8 @@ Because this example uses {\tt .aq}, the loads and stores in the critical sectio
           # ...
           fence        rw, w        # Enforce "release" memory ordering
           amoswap.w    x0, x0, (a0) # Release lock by storing 0.
-          sd           x3, (a3)     # Random unrelated store
-          ld           x4, (a4)     # Random unrelated load
+          sd           x3, (a3)     # Arbitrary unrelated store
+          ld           x4, (a4)     # Arbitrary unrelated load
   \end{verbatim}
   \caption{A spinlock with fences}
   \label{fig:litmus:spinlock_fences}
@@ -409,11 +420,11 @@ Because this example uses {\tt .aq}, the loads and stores in the critical sectio
 
 Now, consider the alternative in Figure~\ref{fig:litmus:spinlock_fences}.
 In this case, even though the {\tt amoswap} does not enforce ordering with an {\tt .aq} bit, the fence nevertheless enforces that the acquire {\tt amoswap} appears earlier in the global memory order than all loads and stores in the critical section.
-Note, however, that in this case, the fence also enforces additional orderings: it also requires that the ``random unrelated load'' at the start of the program appears also appears earlier in the global memory order than the loads and stores of the critical section.  (This particular fence does not, however, enforce any ordering with respect to the ``random unrelated store'' at the start of the snippet.)
+Note, however, that in this case, the fence also enforces additional orderings: it also requires that the ``Arbitrary unrelated load'' at the start of the program also appears earlier in the global memory order than the loads and stores of the critical section.  (This particular fence does not, however, enforce any ordering with respect to the ``Arbitrary unrelated store'' at the start of the snippet.)
 In this way, fence-enforced orderings are slightly coarser than orderings enforced by {\tt.aq}.
 
 Release orderings work exactly the same as acquire orderings, just in the opposite direction.  Release semantics require all loads and stores preceding the release operation in program order to also precede the release operation in the global memory order.
-This ensures, for example, that memory accesses in a critical section appear before the lock-releasing store in the global memory order.  Just as for acquire semantics, release semantics can be enforced using release annotations or with a {\tt fence rw,w} operations.  Using the same examples, the ordering between the loads and stores in the critical section and the ``random unrelated store'' at the end of the code snippet is enforced only by the {\tt fence rw,w} in Figure~\ref{fig:litmus:spinlock_fences}, not by the {\tt .rl} in Figure~\ref{fig:litmus:spinlock_fences}.
+This ensures, for example, that memory accesses in a critical section appear before the lock-releasing store in the global memory order.  Just as for acquire semantics, release semantics can be enforced using release annotations or with a {\tt fence rw,w} operations.  Using the same examples, the ordering between the loads and stores in the critical section and the ``Arbitrary unrelated store'' at the end of the code snippet is enforced only by the {\tt fence rw,w} in Figure~\ref{fig:litmus:spinlock_fences}, not by the {\tt .rl} in Figure~\ref{fig:litmus:spinlock_fences}.
 
 With RCpc annotations alone, store-release-to-load-acquire ordering is not enforced.  This facilitates the porting of code written under the TSO and/or RCpc memory models.  
 To enforce store-release-to-load-acquire ordering, the code must use store-release-RCsc and load-acquire-RCsc operations so that PPO rule \ref{ppo:rcsc} applies.
@@ -438,7 +449,7 @@ Instructions are said to carry dependencies from their source register(s) to the
 For most instructions, this means that the destination register(s) carry a dependency from all source register(s).
 However, there are a few notable exceptions.
 In the case of memory instructions, the value written into the destination register ultimately comes from the memory system rather than from the source register(s) directly, and so this breaks the chain of dependencies carried from the source register(s).
-In the case of indirect jumps, the value written into the destination register comes from the current {\tt pc} (which is never considered a source register by the memory model), and so likewise, indirect jumps do not carry a dependency from the source register(s) to the destination register.
+In the case of unconditional jumps, the value written into the destination register comes from the current {\tt pc} (which is never considered a source register by the memory model), and so likewise, {\tt jalr} (the only jump with a source register) does not carry a dependency from {\em rs1} to {\em rd}.
 
 \begin{verbbox}
 (a) fadd  f3,f1,f2
@@ -578,7 +589,8 @@ Fortunately, this situation and others like it are prevented by the fact that RV
 PPO rules~\ref{ppo:addrdatarfi} and \ref{ppo:addrpo} reflect behaviors of almost all real processor pipeline implementations.
 Rule~\ref{ppo:addrdatarfi} states that a load cannot forward from a store until the address and data for that store are known.
 Consider Figure~\ref{fig:litmus:addrdatarfi}:
-(c) cannot be executed until the data for (b) has been resolved, because (c) must return the value written by (b) (or by something even later in the global memory order), and the old value must not be clobbered by the writeback of (b) before (a) has had a chance to perform.  Therefore, (c) will never perform before (a) has performed.
+(c) cannot be executed until the data for (b) has been resolved, because (c) must return the value written by (b) (or by something even later in the global memory order), and the old value must not be clobbered by the writeback of (b) before (a) has had a chance to perform.
+Therefore, (c) will never perform before (a) has performed.
 
 \begin{figure}[h!]
   \centering
@@ -602,6 +614,7 @@ If there were another store to the same address in between (b) and (c), as in Fi
 
 Rule~\ref{ppo:addrpo} makes a similar observation to the previous rule: a store cannot be performed at memory until all previous loads that might access the same address have themselves been performed.
 Such a load must appear to execute before the store, but it cannot do so if the store were to overwrite the value in memory before the load had a chance to read the old value.
+Likewise, a store generally cannot be performed until it is known that preceding instructions will not cause an exception due to failed address resolution, and in this sense, rule~\ref{ppo:addrpo} can be seen as somewhat of a special case of rule~\ref{ppo:ctrl}.
 
 \begin{figure}[h!]
   \centering
@@ -763,17 +776,17 @@ Power {\tt isync} maps to RISC-V {\tt fence.i; fence r,r}; the latter fence is n
     \hline
     Load-Acquire              & \tt l\{b|h|w|d\}; fence r,rw  \\
     \hline
-    Load-Reserve              & \tt lr.\{w|d\}  \\
+    Load-Exclusive            & \tt lr.\{w|d\}  \\
     \hline
-    Load-Reserve-Acquire      & \tt lr.\{w|d\}.aq \\
+    Load-Acquire-Exclusive    & \tt lr.\{w|d\}.aq \\
     \hline
     Store                     & \tt s\{b|h|w|d\}  \\
     \hline
     Store-Release             & \tt fence rw,w; s\{b|h|w|d\}  \\
     \hline
-    Store-Conditional         & \tt sc.\{w|d\}  \\
+    Store-Exclusive           & \tt sc.\{w|d\}  \\
     \hline
-    Store-Conditional-Release & \tt sc.\{w|d\}.rl  \\
+    Store-Release-Exclusive   & \tt sc.\{w|d\}.rl  \\
     \hline
     \tt dmb                   & \tt fence rw,rw \\
     \hline
@@ -1026,8 +1039,8 @@ The emulator may achieve this effect by simply mapping {\tt amo<op>} onto {\tt l
 The RVWMO and RVTSO memory models by no means preclude microarchitectures from employing sophisticated speculation techniques or other forms of optimization in order to deliver higher performance.
 The models also do not impose any requirement to use any one particular cache hierarchy, nor even to use a cache coherence protocol at all.
 Instead, these models only specify the behaviors that can be exposed to software.
-Microarchitectures are free to use any pipeline design, any coherent or non-coherent cache hierarchy, any on-chip interconnect, etc., as long as the design satisfies the memory model rules.
-That said, to help people understand the actual implementations of the memory model, in this section we provide some guidelines below on how architects and programmers should interpret the models' rules.
+Microarchitectures are free to use any pipeline design, any coherent or non-coherent cache hierarchy, any on-chip interconnect, etc., as long as the design only admits executions that satisfy the memory model rules.
+That said, to help people understand the actual implementations of the memory model, in this section we provide some guidelines on how architects and programmers should interpret the models' rules.
 
 Both RVWMO and RVTSO are multi-copy atomic (or ``other-multi-copy-atomic''): any store value that is visible to a hart other than the one that originally issued it must also be conceptually visible to all other harts in the system.
 In other words, harts may forward from their own previous stores before those stores have become globally visible to all harts, but no early inter-hart forwarding is permitted.
@@ -1035,7 +1048,7 @@ Multi-copy atomicity may be enforced in a number of ways.
 It might hold inherently due to the physical design of the caches and store buffers, it may be enforced via a single-writer/multiple-reader cache coherence protocol, or it might hold due to some other mechanism.
 
 Although multi-copy atomicity does impose some restrictions on the microarchitecture, it is one of the key properties keeping the memory model from becoming extremely complicated.
-For example, a hart may not legally forward a value from a neighbor hart's private store buffer, unless those two harts are the only two in the system.
+For example, a hart may not legally forward a value from a neighbor hart's private store buffer (unless of course it is done in such a way that no new illegal behaviors become architecturally visible).
 Nor may a cache coherence protocol forward a value from one hart to another until the coherence protocol has invalidated all older copies from other caches.
 Of course, microarchitectures may (and high-performance implementations likely will) violate these rules under the covers through speculation or other optimizations, as long as any non-compliant behaviors are not exposed to the programmer.
 
@@ -1058,7 +1071,6 @@ Architectures are free to implement any of the memory model rules as conservativ
   \begin{itemize}
     \item interpret all fences as if they were {\tt fence rw,rw} (or {\tt fence iorw,iorw}, if I/O is involved), regardless of the bits actually set
     \item implement all fences with {\tt .pw} and {\tt .sr} as if they were {\tt fence~rw,rw} (or {\tt fence~iorw,iorw}, if I/O is involved), as ``{\tt w,r}'' is the most expensive of the four possible normal memory orderings anyway
-    \item ignore any addresses passed to a fence instruction and simply implement the fence for all addresses
     \item emulate {\tt .aq} and {\tt .rl} as described in Section~\ref{sec:porting}
     \item enforcing all same-address load-load ordering, even in the presence of patterns such as ``fri-rfi'' and ``RSW''
     \item forbid any forwarding of a value from a store in the store buffer to a subsequent AMO or {\tt lr} to the same address
@@ -1076,7 +1088,7 @@ Architectures that implement RVTSO can safely do the following:
 Other general notes:
 
 \begin{itemize}
-  \item Silent stores (i.e., stores that write the same value that already exists at a memory location) do not have any special behavior from a memory model point of view.  Microarchitectures that attempt to implement silent stores must take care to ensure that the memory model is still obeyed, particularly in cases such as RSW (Section~\ref{sec:memory:overlap}) which tend to be incompatible with silent stores.
+  \item Silent stores (i.e., stores that write the same value that already exists at a memory location) behave like any other store from a memory model point of view.  Microarchitectures that attempt to implement silent stores must take care to ensure that the memory model is still obeyed, particularly in cases such as RSW (Section~\ref{sec:memory:overlap}) which tend to be incompatible with silent stores.
   \item Writes may be merged (i.e., two consecutive writes to the same address may be merged) or subsumed (i.e., the earlier of two back-to-back writes to the same address may be elided) as long as the resulting behavior does not otherwise violate the memory model semantics.
 \end{itemize}
 
@@ -1092,7 +1104,7 @@ The question of write subsumption can be understood from the following example:
         & li t2, 1    &     &              \\
     (a) & sw t1,0(s0) & (d) & lw  a0,0(s1) \\
     (b) & fence w, w  & (e) & sw  a0,0(s0) \\
-    (c) & sw t2,0(s1) & (f) & lw  t3,0(s0) \\
+    (c) & sw t2,0(s1) & (f) & sw  t3,0(s0) \\
     \end{tabular}
   }
   ~~~~
