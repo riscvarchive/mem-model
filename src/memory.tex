@@ -202,12 +202,12 @@ AMOs are therefore inherently atomic, while LR/SC pairs are atomic in the slight
 
 The atomicity axiom forbids from other harts from being interleaved in global memory order between an LR and the SC paired with that LR.
 The atomicity axiom does not forbid loads from being interleaved between the paired operations in program order or in the global memory order, nor does it forbid stores from the same hart or stores to non-overlapping locations from appearing between the paired operations in either program order or in the global memory order.
-For example, the {\tt sc} instructions in Figure~\ref{fig:litmus:lrsdsc} may (but are not guaranteed to) succeed.
+For example, the SC instructions in Figure~\ref{fig:litmus:lrsdsc} may (but are not guaranteed to) succeed.
 None of those successes would violate the atomicity axiom, because the intervening non-conditional stores are from the same hart as the paired load-reserved and store-conditional instructions.
 This way, a memory system that tracks memory accesses at cache line granularity (and which therefore will see the four snippets of Figure~\ref{fig:litmus:lrsdsc} as identical) will not be forced to fail a store conditional instruction that happens to (falsely) share another portion of the same cache line as the memory location being held by the reservation.
 
-The atomicity axiom also technically supports cases in which the {\tt lr} and {\tt sc} touch different addresses and/or use different access sizes; however, use cases for such behaviors are expected to be rare in practice.
-Likewise, scenarios in which stores from the same hart between an {\tt lr}/{\tt sc} pair actually overlap the memory location(s) referenced by the {\tt lr} or {\tt sc} are expected to be rare compared to scenarios where the intervening store may simply fall onto the same cache line.
+The atomicity axiom also technically supports cases in which the LR and SC touch different addresses and/or use different access sizes; however, use cases for such behaviors are expected to be rare in practice.
+Likewise, scenarios in which stores from the same hart between an LR/SC pair actually overlap the memory location(s) referenced by the LR or SC are expected to be rare compared to scenarios where the intervening store may simply fall onto the same cache line.
 
 \subsection{\nameref*{rvwmo:ax:prog}}
 \label{sec:progress}
@@ -318,7 +318,7 @@ As such, PPO rule~\ref{ppo:rdw} strikes a careful balance between enforcing CoRR
 
 There is one more overlapping-address rule: PPO rule~\ref{ppo:amoforward} simply states that a value cannot be returned from an AMO or SC to a subsequent load until the AMO or SC has (in the case of the SC, successfully) performed globally.
 This follows somewhat naturally from the conceptual view that both AMOs and SC instructions are meant to be performed atomically in memory.
-However, notably, PPO rule~\ref{ppo:amoforward} states that hardware may not even non-speculatively forward the value being stored by an {\tt amoswap} to a subsequent load, even though for {\tt amoswap} that store value is not actually semantically dependent on the previous value in memory, as is the case for the other AMOs.
+However, notably, PPO rule~\ref{ppo:amoforward} states that hardware may not even non-speculatively forward the value being stored by an AMOSWAP to a subsequent load, even though for AMOSWAP that store value is not actually semantically dependent on the previous value in memory, as is the case for the other AMOs.
 The same holds true for SC store values that are not semantically dependent on the value returned by the paired LR.
 
 The three PPO rules above also apply when the memory accesses in question only overlap partially.
@@ -339,13 +339,13 @@ The formal model captures this as follows:
 Rule \ref{ppo:fence}: \ppofence
 \end{tabular}
 
-By default, the {\tt fence} instruction ensures that all memory accesses from instructions preceding the fence in program order (the ``predecessor set'') appear earlier in the global memory order than memory accesses from instructions appearing after the fence in program order (the ``successor set'').
+By default, the FENCE instruction ensures that all memory accesses from instructions preceding the fence in program order (the ``predecessor set'') appear earlier in the global memory order than memory accesses from instructions appearing after the fence in program order (the ``successor set'').
 However, fences can optionally further restrict the predecessor set and/or the successor set to  a smaller set of memory accesses in order to provide some speedup.
-Specifically, fences have {\tt .pr}, {\tt .pw}, {\tt .sr}, and {\tt .sw} bits which restrict the predecessor and/or successor sets.
-The predecessor set includes loads (resp.\@ stores) if and only if {\tt .pr} (resp.\@ {\tt .pw}) is set.
-Similarly, the successor set includes loads (resp.\@ stores) if and only if {\tt .sr} (resp.\@ {\tt .sw}) is set.
+Specifically, fences have PR, PW, SR, and SW bits which restrict the predecessor and/or successor sets.
+The predecessor set includes loads (resp.\@ stores) if and only if PR (resp.\@ PW) is set.
+Similarly, the successor set includes loads (resp.\@ stores) if and only if SR (resp.\@ SW) is set.
 
-The {\tt fence} encoding currently has nine non-trivial combinations of the four bits {\tt pr}, {\tt pw}, {\tt sr}, and {\tt sw}, plus one extra encoding ``{\tt fence.tso}'' which is expected to be added to facilitate mapping of ``acquire+release'' or RVTSO semantics.
+The FENCE encoding currently has nine non-trivial combinations of the four bits PR, PW, SR, and SW, plus one extra encoding FENCE.TSO which facilitates mapping of ``acquire+release'' or RVTSO semantics.
 The remaining seven combinations have empty predecessor and/or successor sets and hence are no-ops.
 Of the ten non-trivial options, only six are commonly used in practice:
 {\tt
@@ -358,7 +358,7 @@ Of the ten non-trivial options, only six are commonly used in practice:
   \item fence w,w
 \end{itemize}
 }
-{\tt fence} instructions using any other combination of {\tt .pr}, {\tt .pw}, {\tt .sr}, and {\tt .sw} are reserved.  We strongly recommend that programmers stick to these six.
+FENCE instructions using any other combination of PR, PW, SR, and SW are reserved.  We strongly recommend that programmers stick to these six.
 Other combinations may have unknown or unexpected interactions with the memory model.
 
 Finally, we note that since RISC-V uses a multi-copy atomic memory model, programmers can reason about fences bits in a thread-local manner.  There is no complex notion of ``fence cumulativity'' as found in memory models that are not multi-copy atomic.
@@ -395,7 +395,7 @@ Acquire ordering can be enforced in one of two ways: with an acquire annotation,
 \end{figure}
 
 Consider Figure~\ref{fig:litmus:spinlock_atomics}.
-Because this example uses {\tt .aq}, the loads and stores in the critical section are guaranteed to appear in the global memory order after the {\tt amoswap} used to acquire the lock.  However, assuming {\tt a0}, {\tt a1}, and {\tt a2} point to different memory locations, the loads and stores in the critical section may or may not appear after the ``Arbitrary unrelated load'' at the beginning of the example in the global memory order.
+Because this example uses {\em aq}, the loads and stores in the critical section are guaranteed to appear in the global memory order after the AMOSWAP used to acquire the lock.  However, assuming {\tt a0}, {\tt a1}, and {\tt a2} point to different memory locations, the loads and stores in the critical section may or may not appear after the ``Arbitrary unrelated load'' at the beginning of the example in the global memory order.
 
 \begin{figure}[h!]
   \centering\small
@@ -420,12 +420,12 @@ Because this example uses {\tt .aq}, the loads and stores in the critical sectio
 \end{figure}
 
 Now, consider the alternative in Figure~\ref{fig:litmus:spinlock_fences}.
-In this case, even though the {\tt amoswap} does not enforce ordering with an {\tt .aq} bit, the fence nevertheless enforces that the acquire {\tt amoswap} appears earlier in the global memory order than all loads and stores in the critical section.
+In this case, even though the AMOSWAP does not enforce ordering with an {\em aq} bit, the fence nevertheless enforces that the acquire AMOSWAP appears earlier in the global memory order than all loads and stores in the critical section.
 Note, however, that in this case, the fence also enforces additional orderings: it also requires that the ``Arbitrary unrelated load'' at the start of the program also appears earlier in the global memory order than the loads and stores of the critical section.  (This particular fence does not, however, enforce any ordering with respect to the ``Arbitrary unrelated store'' at the start of the snippet.)
-In this way, fence-enforced orderings are slightly coarser than orderings enforced by {\tt.aq}.
+In this way, fence-enforced orderings are slightly coarser than orderings enforced by {\em .aq}.
 
 Release orderings work exactly the same as acquire orderings, just in the opposite direction.  Release semantics require all loads and stores preceding the release operation in program order to also precede the release operation in the global memory order.
-This ensures, for example, that memory accesses in a critical section appear before the lock-releasing store in the global memory order.  Just as for acquire semantics, release semantics can be enforced using release annotations or with a {\tt fence rw,w} operations.  Using the same examples, the ordering between the loads and stores in the critical section and the ``Arbitrary unrelated store'' at the end of the code snippet is enforced only by the {\tt fence rw,w} in Figure~\ref{fig:litmus:spinlock_fences}, not by the {\tt .rl} in Figure~\ref{fig:litmus:spinlock_fences}.
+This ensures, for example, that memory accesses in a critical section appear before the lock-releasing store in the global memory order.  Just as for acquire semantics, release semantics can be enforced using release annotations or with a {\tt fence rw,w} operations.  Using the same examples, the ordering between the loads and stores in the critical section and the ``Arbitrary unrelated store'' at the end of the code snippet is enforced only by the {\tt fence rw,w} in Figure~\ref{fig:litmus:spinlock_fences}, not by the {\em rl} in Figure~\ref{fig:litmus:spinlock_fences}.
 
 With RCpc annotations alone, store-release-to-load-acquire ordering is not enforced.  This facilitates the porting of code written under the TSO and/or RCpc memory models.  
 To enforce store-release-to-load-acquire ordering, the code must use store-release-RCsc and load-acquire-RCsc operations so that PPO rule \ref{ppo:rcsc} applies.
@@ -450,7 +450,7 @@ Instructions are said to carry dependencies from their source register(s) to the
 For most instructions, this means that the destination register(s) carry a dependency from all source register(s).
 However, there are a few notable exceptions.
 In the case of memory instructions, the value written into the destination register ultimately comes from the memory system rather than from the source register(s) directly, and so this breaks the chain of dependencies carried from the source register(s).
-In the case of unconditional jumps, the value written into the destination register comes from the current {\tt pc} (which is never considered a source register by the memory model), and so likewise, {\tt jalr} (the only jump with a source register) does not carry a dependency from {\em rs1} to {\em rd}.
+In the case of unconditional jumps, the value written into the destination register comes from the current {\tt pc} (which is never considered a source register by the memory model), and so likewise, JALR (the only jump with a source register) does not carry a dependency from {\em rs1} to {\em rd}.
 
 \begin{verbbox}
 (a) fadd  f3,f1,f2
@@ -532,9 +532,9 @@ Even though both branch outcomes have the same target, there is still a control 
 This definition of control dependency is subtly stronger than what might be seen in other contexts (e.g., C++), but it conforms with standard definitions of control dependencies in the literature.
 
 Notably, PPO rules \ref{ppo:addr}--\ref{ppo:ctrl} are also intentionally designed to respect dependencies that originate from the output of a successful store conditional instruction.
-In general, an {\tt sc} instruction will be followed by a branch checking whether the outcome was successful; this implies that there will be a control dependency from the store operation generated by the {\tt sc} instruction to any memory operations following the branch.
-PPO rule~\ref{ppo:ctrl} in turn implies that any subsequent store operations will appear later in the global memory order than the store operation generated by the {\tt sc}.
-However, a dependency cannot originate or be used to enforce ordering from the {\em rd} destination register of an unsuccessful {\tt sc} instruction.
+In general, an SC instruction will be followed by a branch checking whether the outcome was successful; this implies that there will be a control dependency from the store operation generated by the SC instruction to any memory operations following the branch.
+PPO rule~\ref{ppo:ctrl} in turn implies that any subsequent store operations will appear later in the global memory order than the store operation generated by the SC.
+However, a dependency cannot originate or be used to enforce ordering from the {\em rd} destination register of an unsuccessful SC instruction.
 
 \begin{figure}[h!]
   \center
@@ -560,7 +560,7 @@ Consider Figure~\ref{fig:litmus:successdeps}.
 Suppose a hypothetical implementation could occasionally make some early guarantee that a store-conditional operation will succeed.
 In this case, (c) could return 0 to {\tt a2} early (before actually executing), allowing the sequence (d), (e), (f), (a), and then (b) to execute, and then (c) might execute (successfully) only at that point.
 This would imply that (c) writes its own success value to {\tt 0(s1)}!
-Fortunately, this situation and others like it are prevented by the fact that RVWMO respects dependencies originating at the stores generated by successful {\tt sc} instructions.
+Fortunately, this situation and others like it are prevented by the fact that RVWMO respects dependencies originating at the stores generated by successful SC instructions.
 
 \subsection{Pipeline Dependencies (Rules~\ref{ppo:addrdatarfi}--\ref{ppo:addrpo})}
 \label{sec:ppopipeline}
@@ -640,9 +640,9 @@ Consider Figure~\ref{fig:litmus:addrpo}:
 
 \section{Beyond Normal Memory}
 
-RVWMO does not currently attempt to describe how {\tt fence.i}, {\tt sfence.vma}, I/O fences, and PMAs behave.
+RVWMO does not currently attempt to describe how FENCE.I, SFENCE.VMA, I/O fences, and PMAs behave.
 All of these behaviors will be described by future formalizations.
-In the meantime, the behavior of {\tt fence.i} is described in Section~\ref{sec:fence}, the behavior of {\tt sfence.vma} is described in the RISC-V Instruction Set Privileged Architecture Manual, and the behavior of I/O fences and the effects of PMAs are described below.
+In the meantime, the behavior of FENCE.I is described in Section~\ref{sec:fence}, the behavior of SFENCE.VMA is described in the RISC-V Instruction Set Privileged Architecture Manual, and the behavior of I/O fences and the effects of PMAs are described below.
 
 \subsection{Coherence and Cacheability}
 
@@ -672,9 +672,9 @@ memory access $a$ precedes memory access $b$ in global memory order if $a$ prece
   \item $a$ and $b$ are accesses to I/O regions associated with the same channel (except for channel 0)
 \end{enumerate}
 
-Note that the {\tt fence} instruction distinguishes between memory operations and I/O operations in its predecessor and successor sets.
-To enforce ordering between I/O operations and memory operations, code must use a {\tt fence} with {\tt .pi}, {\tt .po}, {\tt .si}, and/or {\tt .so}, plus {\tt .pr}, {\tt .pw}, {\tt .sr}, and/or {\tt .sw}.
-For example, to enforce ordering between a write to normal memory and an MMIO write to a device register, a {\tt FENCE w,o} or stronger is needed.
+Note that the FENCE instruction distinguishes between memory operations and I/O operations in its predecessor and successor sets.
+To enforce ordering between I/O operations and memory operations, code must use a FENCE with PI, PO, SI, and/or SO, plus PR, PW, SR, and/or SW.
+For example, to enforce ordering between a write to normal memory and an MMIO write to a device register, a {\tt fence w,o} or stronger is needed.
 
 \begin{verbbox}
   sd t0, 0(a0)
@@ -735,7 +735,7 @@ Table~\ref{tab:tsomappings} provides a mapping from TSO memory operations onto R
 Normal x86 loads and stores are all inherently acquire-RCpc and release-RCpc operations: TSO enforces all load-load, load-store, and store-store ordering by default.
 Therefore, under RVWMO, all TSO loads must be mapped onto {\tt l\{b|h|w|d\}; fence r,rw}, and all TSO stores must either be mapped onto {\tt amoswap.\{w|d\}.rl~x0} or onto {\tt fence rw,w; s\{b|h|w|d\}}.
 TSO atomic read-modify-writes and x86 instructions using the LOCK prefix are fully-ordered and can be implemented either with {\tt amo<op>.aqrl} or {\tt lr.aq; <op>; sc.aqrl}.
-In the latter case, the {\tt .rl} annotation on the {\tt lr} turns out (for non-obvious reasons) to be redundant and can be omitted.
+In the latter case, the {\em rl} annotation on the LR turns out (for non-obvious reasons) to be redundant and can be omitted.
 
 \begin{table}[h!]
   \centering
@@ -804,7 +804,7 @@ Power {\tt isync} maps to RISC-V {\tt fence.i; fence r,r}; the latter fence is n
 
 Table~\ref{tab:armmappings} provides a mapping from ARM memory operations onto RISC-V memory instructions.
 Since RISC-V does not currently have {\tt l\{b|h|w|d\}.aq[rl]} or  {\tt s\{b|h|w|d\}.[aq]rl} opcodes, ARM load-acquire and store-release operations should be mapped onto {\tt l\{b|h|w|d\}; fence r,rw} and {\tt fence rw,w; s\{b|h|w|d\}}, respectively.
-ARM load-reserved and store-conditional instructions can likewise map onto their RISC-V {\tt lr} and {\tt sc} equivalents.
+ARM load-reserved and store-conditional instructions can likewise map onto their RISC-V LR and SC equivalents.
 ARM {\tt isb} maps to RISC-V {\tt fence.i;~fence~r,r} similarly to how {\tt isync} maps for Power.
 
 \begin{table}[h!]
@@ -854,7 +854,7 @@ ARM {\tt isb} maps to RISC-V {\tt fence.i;~fence~r,r} similarly to how {\tt isyn
     \hline
     \tt atomic\_<op>           & \tt amo<op>.\{w|d\}.aqrl & \tt lr.\{w|d\}.aq; <op>; sc.\{w|d\}.aqrl \\
     \hline
-    \multicolumn{3}{p{0.9\textwidth}}{$^*$an alternative mapping of ``{\tt fence.tso;~lr.\{w|d\};~<op>;~sc.\{w|d\}}'' uses more instructions but may have higher performance on some systems, as {\tt fence.tso} is lighterweight than the implicit full fence in {\tt sc.\{w|d\}.aqrl}.}
+    \multicolumn{3}{p{0.9\textwidth}}{$^*$an alternative mapping of ``{\tt fence.tso;~lr.\{w|d\};~<op>;~sc.\{w|d\}}'' uses more instructions but may have higher performance on some systems, as FENCE.TSO is lighterweight than the implicit full fence in {\tt sc.\{w|d\}.aqrl}.}
   \end{tabular}
   \caption{Mappings from Linux memory primitives to RISC-V primitives.  Other constructs (such as spinlocks) should follow accordingly.}
   \label{tab:linuxmappings}
@@ -866,11 +866,11 @@ The Linux fences {\tt dma\_rmb()} and {\tt dma\_wmb()} map onto {\tt fence r,r} 
 
 The Linux mappings for release operations may seem stronger than necessary, but these mappings are needed to cover some cases in which Linux requires stronger orderings than the more intuitive mappings would provide.
 In particular, as of the time this text is being written, Linux is actively debating whether to require load-load, load-store, and store-store orderings between accesses in one critical section and accesses in a subsequent critical section in the same hart and protected by the same synchronization object.
-Not all combinations of {\tt fence rw,w}/{\tt fence r,rw} mappings with {\tt .aq}/{\tt .rl} mappings combine to provide such orderings.
+Not all combinations of {\tt fence rw,w}/{\tt fence r,rw} mappings with {\em aq}/{\em rl} mappings combine to provide such orderings.
 There are a few ways around this problem, including:
 \begin{enumerate}
-  \item Always use {\tt fence rw,w}/{\tt fence r,rw}, and never use {\tt .aq}/{\tt .rl}.  This suffices but is undesirable, as it defeats the purpose of the {\tt .aq}/{\tt .rl} modifiers.
-  \item Always use {\tt .aq}/{\tt .rl}, and never use {\tt fence rw,w}/{\tt fence r,rw}.  This does not currently work due to the lack of {\tt l\{b|h|w|d\}.aq[rl]} and {\tt s\{b|h|w|d\}.[aq]rl} opcodes.
+  \item Always use {\tt fence rw,w}/{\tt fence r,rw}, and never use {\em aq}/{\em rl}.  This suffices but is undesirable, as it defeats the purpose of the {\em aq}/{\em rl} modifiers.
+  \item Always use {\em aq}/{\em rl}, and never use {\tt fence rw,w}/{\tt fence r,rw}.  This does not currently work due to the lack of {\tt l\{b|h|w|d\}.aq[rl]} and {\tt s\{b|h|w|d\}.[aq]rl} opcodes.
   \item Strengthen the mappings of release operations such that they would enforce sufficient orderings in the presence of either type of acquire mapping.  This is the currently-recommended solution, and the one shown in Table~\ref{tab:linuxmappings}.
 \end{enumerate}
 
@@ -1033,7 +1033,7 @@ Note however that the two mappings only interoperate correctly when the original
 Any AMO can be emulated by an LR/SC pair, but care must be taken to ensure that any PPO orderings that originate from the LR are also made to originate from the SC, and that any PPO orderings that terminate at the SC are also made to terminate at the LR.
 For example, the LR must also be made to respect any data dependencies that the AMO has, given that load operations do not otherwise have any notion of a data dependency.
 Likewise, the effect a {\tt fence r,r} elsewhere in the same hart must also be made to apply to the SC, which would not otherwise respect that fence.
-The emulator may achieve this effect by simply mapping {\tt amo<op>} onto {\tt lr.aq;~<op>;~sc.aqrl}, matching the mapping used elsewhere for fully-ordered atomics.
+The emulator may achieve this effect by simply mapping AMOs onto {\tt lr.aq;~<op>;~sc.aqrl}, matching the mapping used elsewhere for fully-ordered atomics.
 
 \section{Implementation Guidelines}
 
@@ -1071,18 +1071,18 @@ We also expect the following from the hardware perspective:
 Architectures are free to implement any of the memory model rules as conservatively as they choose.  For example, a hardware implementation may choose to do any or all of the following:
   \begin{itemize}
     \item interpret all fences as if they were {\tt fence rw,rw} (or {\tt fence iorw,iorw}, if I/O is involved), regardless of the bits actually set
-    \item implement all fences with {\tt .pw} and {\tt .sr} as if they were {\tt fence~rw,rw} (or {\tt fence~iorw,iorw}, if I/O is involved), as ``{\tt w,r}'' is the most expensive of the four possible normal memory orderings anyway
-    \item emulate {\tt .aq} and {\tt .rl} as described in Section~\ref{sec:porting}
+    \item implement all fences with PW and SR as if they were {\tt fence~rw,rw} (or {\tt fence~iorw,iorw}, if I/O is involved), as ``{\tt w,r}'' is the most expensive of the four possible normal memory orderings anyway
+    \item emulate {\em aq} and {\em rl} as described in Section~\ref{sec:porting}
     \item enforcing all same-address load-load ordering, even in the presence of patterns such as ``fri-rfi'' and ``RSW''
-    \item forbid any forwarding of a value from a store in the store buffer to a subsequent AMO or {\tt lr} to the same address
-    \item forbid any forwarding of a value from an AMO or {\tt sc} in the store buffer to a subsequent load to the same address
+    \item forbid any forwarding of a value from a store in the store buffer to a subsequent AMO or LR to the same address
+    \item forbid any forwarding of a value from an AMO or SC in the store buffer to a subsequent load to the same address
     \item implement TSO on all memory accesses, and ignore any normal memory fences that do not include ``{\tt w,r}'' ordering (e.g., as Ztso implementations will do)
     \item implement all atomics to be RCsc or even fully-ordered, regardless of annotation
   \end{itemize}
 
 Architectures that implement RVTSO can safely do the following:
 \begin{itemize}
-  \item Ignore all fences that do not have both {\tt .pw} and {\tt .sr} (unless the fence also orders I/O)
+  \item Ignore all fences that do not have both PW and SR (unless the fence also orders I/O)
   \item Ignore all PPO rules except for rules \ref{ppo:fence} and \ref{ppo:rcsc}, since the rest are redundant with other PPO rules under RVTSO assumptions
 \end{itemize}
 
