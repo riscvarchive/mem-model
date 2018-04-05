@@ -1359,9 +1359,9 @@ RVWMO is designed to provide flexibility for architects to build high-performanc
 The RISC-V ISA also provides the optional Ztso extension.  Ztso imposes the stronger RVTSO (RISC-V Total Store Ordering) memory model for hardware that chooses to provide it.
 RVTSO provides a simpler programming model but is more restrictive on implementations.
 
-Under both models, code running on a single hart appears to execute in order from the perspective of other memory operations in the same hart, but memory instructions from another hart may observe the memory instructions from the first hart being executed in a different order.
-Therefore, under both models, multithreaded code may require explicit synchronization to guarantee ordering between memory operations from different harts.
-The base RISC-V ISA provides a {\tt fence} instruction for this purpose, described in Section~\ref{sec:fence}, while the optional ``A'' atomics extension additionally defines load-reserved/store-conditional and atomic read-modify-write operations.
+Under both models, code running on a single hart appears to execute in order from the perspective of other memory instructions in the same hart, but memory instructions from another hart may observe the memory instructions from the first hart being executed in a different order.
+Therefore, under both models, multithreaded code may require explicit synchronization to guarantee ordering between memory instructions from different harts.
+The base RISC-V ISA provides a {\tt fence} instruction for this purpose, described in Section~\ref{sec:fence}, while the optional ``A'' atomics extension additionally defines load-reserved/store-conditional and atomic read-modify-write instructions.
 
 The appendices to this specification provide both axiomatic and operational formalizations of the memory consistency model as well as additional explanatory material.
 

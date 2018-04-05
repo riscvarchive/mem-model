@@ -200,10 +200,11 @@ AMOs are therefore inherently atomic, while LR/SC pairs are atomic in the slight
   \label{fig:litmus:lrsdsc}
 \end{figure}
 
-The atomicity axiom does not forbid loads from being interleaved between the paired operations in program order or in the global memory order, nor does it forbid stores from the same hart from appearing between the paired operations in either program order or in the global memory order.
+The atomicity axiom forbids from other harts from being interleaved in global memory order between an LR and the SC paired with that LR.
+The atomicity axiom does not forbid loads from being interleaved between the paired operations in program order or in the global memory order, nor does it forbid stores from the same hart or stores to non-overlapping locations from appearing between the paired operations in either program order or in the global memory order.
 For example, the {\tt sc} instructions in Figure~\ref{fig:litmus:lrsdsc} may (but are not guaranteed to) succeed.
 None of those successes would violate the atomicity axiom, because the intervening non-conditional stores are from the same hart as the paired load-reserved and store-conditional instructions.
-This way, a memory system that tracks memory accesses at cache line granularity (and which therefore will see the two snippets of Figure~\ref{fig:litmus:lrsdsc} as identical) will not be forced to fail a store conditional instruction that happens to (falsely) share another portion of the same cache line as the memory location being held by the reservation.
+This way, a memory system that tracks memory accesses at cache line granularity (and which therefore will see the four snippets of Figure~\ref{fig:litmus:lrsdsc} as identical) will not be forced to fail a store conditional instruction that happens to (falsely) share another portion of the same cache line as the memory location being held by the reservation.
 
 The atomicity axiom also technically supports cases in which the {\tt lr} and {\tt sc} touch different addresses and/or use different access sizes; however, use cases for such behaviors are expected to be rare in practice.
 Likewise, scenarios in which stores from the same hart between an {\tt lr}/{\tt sc} pair actually overlap the memory location(s) referenced by the {\tt lr} or {\tt sc} are expected to be rare compared to scenarios where the intervening store may simply fall onto the same cache line.
