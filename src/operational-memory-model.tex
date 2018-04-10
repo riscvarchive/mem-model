@@ -635,6 +635,8 @@ Action:
 
 \subsection{Limitations}\label{sec:omm:limitations}
 \begin{itemize}
+\item The model supports the RVWMO memory model.
+It does not support misaligned atomics, and it does not support RVTSO.
 \item The model covers user-level RV64I and RV64A.
 It should be trivial to adapt the model to RV32I/A but we have never tested it.
 % unsupported (system) instructions: ecall, ebreak, csrrw, csrrs, csrrc, csrrwi, csrrsi, csrrci
