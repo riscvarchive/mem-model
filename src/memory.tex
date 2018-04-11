@@ -256,8 +256,8 @@ However, because the global memory order corresponds to the order in which loads
 
 \begin{figure}[h!]
   \center
-  {
-    \tt\small
+  \begin{tabular}{m{.4\linewidth}@{\qquad}m{.4\linewidth}}
+    {\tt\small
     \begin{tabular}{cl||cl}
     \multicolumn{2}{c}{Hart 0} & \multicolumn{2}{c}{Hart 1} \\
     \hline
@@ -270,8 +270,9 @@ However, because the global memory order corresponds to the order in which loads
           &             & (i) & lw~ a2,0(s0) \\
     \end{tabular}
   }
-  ~~~~
-  \diagram
+  &
+  \input{figs/B4.pdf_t}
+  \end{tabular}
   \caption{Litmus test MP+fence.w.w+fri-rfi-addr}
   \label{fig:litmus:frirfi}
 \end{figure}
