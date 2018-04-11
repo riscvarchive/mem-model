@@ -552,7 +552,8 @@ PPO rule~\ref{ppo:ctrl} in turn implies that any subsequent store operations wil
 However, a dependency cannot originate or be used to enforce ordering from the {\em rd} destination register of an unsuccessful SC instruction.
 
 \begin{figure}[h!]
-  \center
+  \centering
+  \begin{tabular}{m{.4\linewidth}m{0.05\linewidth}m{.4\linewidth}}
   {
     \tt\small
     \begin{tabular}{cl||cl}
@@ -564,8 +565,9 @@ However, a dependency cannot originate or be used to enforce ordering from the {
       (d) & sd a2,0(s2)    &                    \\
     \end{tabular}
   }
-  ~~~~
-  \diagram
+  & &
+  \input{figs/B12.pdf_t}
+  \end{tabular}
   \caption{A variant of the LB litmus test}
   \label{fig:litmus:successdeps}
 \end{figure}
