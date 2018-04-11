@@ -298,6 +298,7 @@ Likewise, if two back-to-back loads return the values written by the same store,
 
 \begin{figure}[h!]
   \centering
+  \begin{tabular}{m{.4\linewidth}@{\qquad\quad}m{.6\linewidth}}
   {
     \tt\small
     \begin{tabular}{cl||cl}
@@ -305,22 +306,23 @@ Likewise, if two back-to-back loads return the values written by the same store,
     \hline
           & li t1, 1    & (d) & lw~ a0,0(s1) \\
       (a) & sw t1,0(s0) & (e) & xor t2,a0,a0 \\
-      (b) & fence w, w  & (f) & add s2,s2,t2 \\
-      (c) & sw t1,0(s1) & (g) & lw~ a1,0(s2) \\
+      (b) & fence w, w  & (f) & add s4,s2,t2 \\
+      (c) & sw t1,0(s1) & (g) & lw~ a1,0(s4) \\
           &             & (h) & lw~ a2,0(s2) \\
           &             & (i) & xor t3,a2,a2 \\
           &             & (j) & add s0,s0,t3 \\
           &             & (k) & lw~ a3,0(s0) \\
     \end{tabular}
   }
-  ~~~~
-  \diagram
+  &
+  \input{figs/B5.pdf_t}
+   \end{tabular}
   \caption{Litmus test RSW}
   \label{fig:litmus:rsw}
 \end{figure}
 
 Consider the litmus test of Figure~\ref{fig:litmus:rsw}.
-The outcome {\tt a0=1}, {\tt a1=a2}, {\tt a3=0} can be observed by allowing (g) and (h) to be reordered.  This might be done speculatively, and the speculation can be justified by the microarchitecture (e.g., by snooping for cache invalidations and finding none) because replaying (h) after (g) would return the value written by the same store anyway.
+The outcome {\tt a0=1}, {\tt a1=$v$},  {\tt a2=$v$}, {\tt a3=0} can be observed by allowing (g) and (h) to be reordered.  This might be done speculatively, and the speculation can be justified by the microarchitecture (e.g., by snooping for cache invalidations and finding none) because replaying (h) after (g) would return the value written by the same store anyway.
 Hence assuming {\tt a1} and {\tt a2} would end up with the same value written by the same store anyway, (g) and (h) can be legally reordered.
 The global memory order corresponding to this execution would be (h),(k),(a),(c),(d),(g).
 
