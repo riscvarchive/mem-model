@@ -1,4 +1,14 @@
 \newcommand{\diagram}{\textcolor{red}{(picture coming soon)}}
+%%%%Nice fonts in diagrams
+%%Images
+\makeatletter
+% for the fig2dev version on P desktop
+\gdef\SetFigFont#1#2#3#4#5{%
+  \reset@font\fontsize{12}{#2pt}%
+%  \fontfamily{#3}\fontseries{#4}\fontshape{#5}%
+  \fontfamily{\sfdefault}\fontseries{#4}\fontshape{#5}%
+  \selectfont}
+\makeatother
 
 \chapter{RVWMO Explanatory Material}
 \label{sec:explanation}
@@ -97,6 +107,7 @@ Any other hart will therefore observe the load as performing before the store.
 
 \begin{figure}[h!]
   \centering
+  \begin{tabular}{m{.4\linewidth}@{\qquad}m{.4\linewidth}}
   {
     \tt\small
     \begin{tabular}{cl||cl}
@@ -109,8 +120,9 @@ Any other hart will therefore observe the load as performing before the store.
       (d) & lw a1,0(s1) & (h) & lw a3,0(s0) \\
     \end{tabular}
   }
-  ~~~~
-  \diagram
+  &
+  \input{figs/B2.pdf_t}
+  \end{tabular}
   \caption{A store buffer forwarding litmus test}
   \label{fig:litmus:storebuffer}
 \end{figure}
