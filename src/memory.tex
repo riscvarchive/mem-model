@@ -590,6 +590,7 @@ Fortunately, this situation and others like it are prevented by the fact that RV
 
 \begin{figure}[h!]
   \centering
+  \begin{tabular}{m{.2\linewidth}m{.05\linewidth}m{.2\linewidth}}
   {
     \tt\small
     \begin{tabular}{cl}
@@ -597,9 +598,10 @@ Fortunately, this situation and others like it are prevented by the fact that RV
       (b) & sw a0, 0(s1)   \\
       (c) & lw a1, 0(s1)   \\
     \end{tabular}
-  }
-  ~~~~
-  \diagram
+  } & &
+  \input{figs/B13.pdf_t}
+  \end{tabular}
+
   \caption{Because of the data dependency from (a) to (b), (a) also precedes (c)}
   \label{fig:litmus:addrdatarfi}
 \end{figure}
@@ -611,8 +613,8 @@ Consider Figure~\ref{fig:litmus:addrdatarfi}:
 Therefore, (c) will never perform before (a) has performed.
 
 \begin{figure}[h!]
-  \centering
-  {
+  \centering  
+  \begin{tabular}{m{.2\linewidth}m{.05\linewidth}m{.2\linewidth}}
     \tt\small
     \begin{tabular}{cl}
           & li t1, 1       \\
@@ -621,9 +623,9 @@ Therefore, (c) will never perform before (a) has performed.
           & sw t1, 0(s1)   \\
       (c) & lw a1, 0(s1)   \\
     \end{tabular}
-  }
-  ~~~~
-  \diagram
+     & &
+    \input{figs/B14.pdf_t}
+  \end{tabular}
   \caption{Because of the extra store between (b) and (c), (a) no longer necessarily precedes (c)}
   \label{fig:litmus:addrdatarfi_no}
 \end{figure}
@@ -636,17 +638,17 @@ Likewise, a store generally cannot be performed until it is known that preceding
 
 \begin{figure}[h!]
   \centering
-  {
+  \begin{tabular}{m{.2\linewidth}m{.05\linewidth}m{.2\linewidth}}
     \tt\small
     \begin{tabular}{cl}
         & li t1, 1       \\
     (a) & lw a0, 0(s0)   \\
     (b) & lw a1, 0(a0)   \\
     (c) & sw t1, 0(s1)   \\
-    \end{tabular}
-  }
-  ~~~~
-  \diagram
+    \end{tabular}  
+    & &
+    \input{figs/B15.pdf_t}
+  \end{tabular}
   \caption{Because of the address dependency from (a) to (b), (a) also precedes (c)}
   \label{fig:litmus:addrpo}
 \end{figure}
