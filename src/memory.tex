@@ -43,7 +43,7 @@ Each figure shows the litmus test code on the left, and a visualization of one p
 
 \begin{figure}[h!]
   \centering
-  {
+    \begin{tabular}{m{.4\linewidth}m{.05\linewidth}m{.4\linewidth}}
     \tt\small
     \begin{tabular}{cl||cl}
     \multicolumn{2}{c}{Hart 0} & \multicolumn{2}{c}{Hart 1} \\
@@ -61,10 +61,11 @@ Each figure shows the litmus test code on the left, and a visualization of one p
       (d) & sw t3,0(s0) & (f) & sw t5,0(s0) \\
           & $\vdots$    &     & $\vdots$    \\
     \end{tabular}
-  }
-  ~~~~
-  \diagram
-  \caption{A sample litmus test}
+    & &
+    \input{figs/B1+A.pdf_t}
+%\input{figs/B1+B.pdf_t} %Another invalid execution
+\end{tabular}
+    \caption{A sample litmus test and one invalid execution ({\tt a0=1}).}
   \label{fig:litmus:sample}
 \end{figure}
 
