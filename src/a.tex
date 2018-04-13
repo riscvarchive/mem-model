@@ -1,15 +1,6 @@
 \chapter{``A'' Standard Extension for Atomic Instructions, Version 2.0}
 \label{atomics}
 
-\begin{commentary}
-This section is somewhat out of date as the RISC-V memory model is
-currently under revision to ensure it can efficiently support current
-programming language memory models.  The revised base memory model
-will contain further ordering constraints, including at least that
-loads to the same address from the same hart cannot be reordered, and
-that syntactic data dependencies between instructions are respected.
-\end{commentary}
-
 The standard atomic instruction extension is denoted by instruction
 subset name ``A'', and contains instructions that atomically
 read-modify-write memory to support synchronization between multiple
@@ -155,14 +146,8 @@ The execution environment may require that the address held in {\em rs1} be
 naturally aligned to the size of the operand (i.e., eight-byte aligned for
 64-bit words and four-byte aligned for 32-bit words).  If, in such an
 execution environment, an LR or SC address is not naturally aligned,
-a misaligned address exception will be generated.
-
-If the execution environment permits misaligned LR and SC addresses, then LR
-and SC instructions using misaligned addresses execute atomically with respect
-to other accesses to the same address and of the same size.  In such
-environments, regular loads and stores using misaligned addresses also execute
-atomically with respect to other accesses to the same address and of the same
-size.
+a misaligned address exception will be generated.  Support for misaligned
+atomics is defined in the ``Zam'' extension (Chapter~\ref{sec:zam}).
 
 \label{lrscseq}
 
@@ -269,12 +254,15 @@ before the immediately preceding LR.  Due to the atomic nature of the
 LR/SC sequence, no memory operations from another hart can be observed
 to have occurred between the LR and a successful SC.  The LR/SC
 sequence can be given acquire semantics by setting the {\em aq} bit on
-the SC instruction.  The LR/SC sequence can be given release semantics
-by setting the {\em rl} bit on the LR instruction.  Setting the {\em
+the LR instruction.  The LR/SC sequence can be given release semantics
+by setting the {\em rl} bit on the SC instruction.  Setting the {\em
   aq} bit on the LR instruction, and setting both the {\em aq} and the {\em
   rl} bit on the SC instruction makes the LR/SC sequence sequentially
 consistent, meaning that it cannot be reordered with earlier or
 later memory operations from the same hart.
+
+The {\em rl} bit on an LR instruction must not be set unless the {\em aq} bit is also set.
+The {\em aq} bit on an SC instruction must not be set unless the {\em rl} bit is also set.
 
 If neither bit is set on both LR and SC, the LR/SC sequence can be
 observed to occur before or after surrounding memory operations from
@@ -340,14 +328,8 @@ The execution environment may require that the address held in {\em rs1} be
 naturally aligned to the size of the operand (i.e., eight-byte aligned for
 64-bit words and four-byte aligned for 32-bit words).  If, in such an execution
 environment, an AMO address is not naturally aligned, a misaligned address
-exception will be generated.
-
-If the execution environment permits misaligned AMO addresses, then AMO
-instructions using misaligned addresses execute atomically with respect
-to other accesses to the same address and of the same size.  In such
-environments, regular loads and stores using misaligned addresses also execute
-atomically with respect to other accesses to the same address and of the same
-size.
+exception will be generated.  Support for misaligned atomics is defined in the
+``Zam'' extension (Chapter~\ref{sec:zam}).
 
 The operations supported are swap, integer add, logical AND, logical
 OR, logical XOR, and signed and unsigned integer maximum and minimum.
