@@ -1114,7 +1114,7 @@ Other general notes:
 The question of write subsumption can be understood from the following example:
 \begin{figure}[h!]
   \centering
-  {
+  \begin{tabular}{m{.4\linewidth}m{.1\linewidth}m{.4\linewidth}}
     \tt\small
     \begin{tabular}{cl||cl}
     \multicolumn{2}{c}{Hart 0} & \multicolumn{2}{c}{Hart 1} \\
@@ -1125,20 +1125,21 @@ The question of write subsumption can be understood from the following example:
     (b) & fence w, w  & (e) & sw  a0,0(s0) \\
     (c) & sw t2,0(s1) & (f) & sw  t3,0(s0) \\
     \end{tabular}
-  }
-  ~~~~
-  \diagram
-  \caption{Write subsumption litmus test}
+  & &
+    \input{figs/B18.pdf_t}
+  \end{tabular}
+  \caption{Write subsumption litmus test, allowed execution.}
   \label{fig:litmus:subsumption}
 \end{figure}
 
-As written, (a) must precede (f) in the global memory order:
+As written, if the load ~(d) reads value~$1$, then (a) must precede (f) in the global memory order:
 \begin{itemize}
   \item (a) precedes (c) in the global memory order because of rule 2
   \item (c) precedes (d) in the global memory order because of the Load Value axiom
   \item (d) precedes (e) in the global memory order because of rule 7
   \item (e) precedes (f) in the global memory order because of rule 1
 \end{itemize}
+In other words the final value of the memory location whose address is in {\tt s0} must be~$2$ (the value written by the store~(f)) and cannot be~$3$ (the value written by the store~(a)).
 
 A very aggressive microarchitecture might erroneously decide to discard (e), as (f) supersedes it, and this may in turn lead the microarchitecture to break the now-eliminated dependency between (d) and (f) (and hence also between (a) and (f)).
 This would violate the memory model rules, and hence it is forbidden.
