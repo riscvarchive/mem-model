@@ -72,8 +72,43 @@ Each figure shows the litmus test code on the left, and a visualization of one p
 Litmus tests are used to understand the implications of the memory model in specific concrete situations.
 For example, in the litmus test of Figure~\ref{fig:litmus:sample}, the final value of {\tt a0} in the first hart can be either 2, 4, or 5, depending on the dynamic interleaving of the instruction stream from each hart at runtime.
 However, in this example, the final value of {\tt a0} in Hart 0 will never be 1 or 3; intuitively, the value 1 will no longer be visible at the time the load executes, and the value 3 will not yet be visible by the time the load executes.
-
 We analyze this test and many others below.
+
+\begin{table}[h]
+  \centering\small
+  \begin{tabular}{|c|l|}
+    \hline
+    Edge & Full Name (and explanation) \\
+    \hline
+    \sf po   & Program Order \\
+    \hline
+    \sf rf   & Reads From (from each store to the loads that return a value written by that store) \\
+    \hline
+    \sf co   & Coherence (a total order on the stores to each address) \\
+    \hline
+    \sf fr   & From-Reads (from each load to co-successors of the store from which the load returned a value) \\
+    \hline
+    \sf ppo  & Preserved Program Order \\
+    \hline
+    \sf fence & Orderings enforced by a FENCE instruction \\
+    \hline
+    \sf addr & Address Dependency \\
+    \hline
+    \sf ctrl & Control Dependency \\
+    \hline
+    \sf data & Data Dependency \\
+    \hline
+  \end{tabular}
+  \caption{A key for the litmus test diagrams drawn in this appendix}
+  \label{tab:litmus:key}
+\end{table}
+
+The diagram shown to the right of each litmus test shows a visual representation of the particular execution candidate being considered.
+These diagrams use a notation that is common in the memory model literature for constraining the set of possible global memory orders that could produce the execution in question.
+It is also the basis for the \textsf{herd} models presented in Appendix~\ref{sec:herd}.
+This notation is explained in Table~\ref{tab:litmus:key}.
+Of the listed relations, ``rf'' edges between harts, ``co'' edges, ``fr'' edges, and ``ppo'' edges directly constrain the global memory order (as do ``fence'', ``addr'', ``data'', and some ``ctrl'' edges, via ``ppo'').
+Other edges (such as ``po'' edges and intra-hart ``rf'' edges) are informative but do not constrain the global memory order.
 
 \section{Explaining the RVWMO Rules}
 In this section, we provide explanation and examples for all of the RVWMO rules and axioms.
@@ -1171,6 +1206,7 @@ To facilitate formal analysis of RVWMO, this chapter presents a set of formaliza
 
 \clearpage
 \section{Formal Axiomatic Specification in Herd}
+\label{sec:herd}
 
 The tool \textsf{herd} takes a memory model and a litmus test as input and simulates the execution of the test on top of the memory model. Memory models are written in the domain specific language \textsc{Cat}. This section provides two \textsc{Cat} memory model of RVWMO. The first model, Figure~\ref{fig:herd2}, follows the \emph{global memory order}, Section~\ref{sec:memorymodel}, definition of~RVWMO, as much as is possible for a \textsc{Cat} model. The second model, Figure~\ref{fig:herd3}, is an equivalent, more efficient, partial order based RVWMO model.
 
