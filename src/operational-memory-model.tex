@@ -521,9 +521,11 @@ Action:
 \paragraph{Commit and propagate store operation of an {\tt sc}}\label{omm:commit_sc}
 An uncommitted {\tt sc} instruction instance $i$, from hart $h$, in state {\sc Pending\_mem\_stores}({\it store\_continuation}), with a paired {\tt lr} $i'$ that has been satisfied by some store slices $msoss$, can be committed and propagated at the same time if:
 \begin{enumerate}
+\item $i'$ is finished;
+\item every memory store operation that has been forwarded to $i'$ is propagated;
 \item the conditions of \nameref{omm:commit_stores} is satisfied;
 \item the conditions of \nameref{omm:prop_store} is satisfied (notice that an {\tt sc} instruction can only have one memory store operation); and
-\item for every store slice $msos$ from $msoss$ that has already propagated to the shared memory, $msos$ has not been overwritten in the shared memory, by a store that is from a hart that is not $h$, at any point since $msos$ was propagated to memory.
+\item for every store slice $msos$ from $msoss$, $msos$ has not been overwritten, in the shared memory, by a store that is from a hart that is not $h$, at any point since $msos$ was propagated to memory.
 \end{enumerate}
 Action:
 \begin{enumerate}
