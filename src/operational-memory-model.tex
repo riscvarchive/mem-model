@@ -206,7 +206,7 @@ Here:
 \item {\it mem\_value} and {\it reg\_value} are lists of bytes;
 \item {\it address} is an integer of XLEN bits;
 \item for load/store, {\it kind} identifies whether it is {\tt lr/sc}, acquire-RCpc/release-RCpc, acquire-RCsc/release-RCsc, acquire-release-RCsc;
-\item for fence, {\it kind} identifies the predecessor and successor sets of the instruction;
+\item for fence, {\it kind} identifies whether it is a normal or TSO, and (for normal fences) the predecessor and successor sets;
 \item {\it reg\_name} identifies a register and a slice thereof (start and
   end bit indices); and
 \item the continuations describe how the instruction instance will continue for each value that might be provided by the surrounding memory model (the {\it load\_continuation} and {\it read\_continuation} take the value loaded from memory and read from the previous register write, the {\it store\_continuation} takes {\it false} for an {\tt sc} that failed and {\it true} in all other cases, and {\it res\_continuation} takes {\it false} if the {\tt sc} should fail early and {\it true} otherwise).
@@ -374,6 +374,7 @@ Here we decompose them to one-byte accesses as this granularity subsumes all oth
 For a non-AMO load instruction instance $i$ in state {\sc Pending\_mem\_loads}({\it load\_continuation}), and a memory load operation $mlo$ in $i.\textit{mem\_loads}$ that has unsatisfied slices, the memory load operation can be partially or entirely satisfied by forwarding from unpropagated memory store operations by store instruction instances that are program-order-before $i$ if:
 \begin{enumerate}
 \item all program-order-previous {\tt fence} instructions with {\tt .sr} set are finished;
+\item for every program-order-previous {\tt fence.tso} instruction, $f$, that is not finished, all load instructions that are program-order-before $f$ are finished;
 % \item all program-order-previous {\tt fence.i} instructions are finished;
 \item if $i$ is a load-acquire-RCsc, all program-order-previous store-releases-RCsc are finished;
 \item if $i$ is a load-acquire-release, all program-order-previous instructions are finished;
@@ -415,6 +416,7 @@ $msoss$ does not include memory store operations from finished stores (as those 
 For an instruction instance $i$ of a non-AMO load instruction or an AMO instruction in the context of the ``\nameref{omm:do_amo}'' transition, any memory load operation $mlo$ in $i.\textit{mem\_loads}$ that has unsatisfied slices, can be satisfied from memory if:
 \begin{enumerate}
 \item all program-order-previous {\tt fence} instructions with {\tt .sr} set are finished;
+\item for every program-order-previous {\tt fence.tso} instruction, $f$, that is not finished, all load instructions that are program-order-before $f$ are finished;
 % \item all program-order-previous {\tt fence.i} instructions are finished;
 \item if $i$ is a load-acquire-RCsc, all program-order-previous store-releases-RCsc are finished;
 \item if $i$ is a load-acquire-release, all program-order-previous instructions are finished;
@@ -478,6 +480,7 @@ An uncommitted instruction instance $i$ of a non-{\tt sc} store instruction or a
 \item $i$ has fully determined data;
 \item all program-order-previous conditional branch and indirect jump instructions are finished;
 \item all program-order-previous {\tt fence} instructions with {\tt .sw} set are finished;
+\item all program-order-previous {\tt fence.tso} instructions are finished;
 % \item all program-order-previous {\tt fence.i} instructions are finished;
 \item all program-order-previous load-acquire instructions are finished;
 \item all program-order-previous store-acquire-release instructions are finished;
@@ -569,8 +572,9 @@ Before taking the transition above, the store operation of the AMO does not have
 \paragraph{Commit fence}\label{omm:commit_fence}
 A fence instruction instance $i$ in state {\sc Plain}({\sc Fence}({\it kind}, {\it next\_state})) can be committed if:
 \begin{enumerate}
-\item if $i$ has {\tt .pr} set, all program-order-previous load instructions are finished; and
-\item if $i$ has {\tt .pw} set, all program-order-previous store instructions are finished.
+\item if $i$ is a normal fence and it has {\tt .pr} set, all program-order-previous load instructions are finished;
+\item if $i$ is a normal fence and it has {\tt .pw} set, all program-order-previous store instructions are finished; and
+\item if $i$ is a {\tt fence.tso}, all program-order-previous load and store instructions are finished.
 % \item if $i$ is a {\tt fence.i} instruction, all program-order-previous memory access instructions have fully determined memory footprints.
 \end{enumerate}
 Action:
