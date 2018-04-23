@@ -1,13 +1,5 @@
-\chapter{RVWMO Syntactic Dependency Rules}
-\label{ch:deps}
-This appendix provides a concrete listing of the source and destination registers for each instruction.
-These definitions are used to define syntactic dependencies in Section~\ref{sec:deps}.
-
-The term ``accumulating CSR'' is used to describe a CSR that is both a source and a destination register, but which carries a dependency only from itself to itself.
-
-Instructions carry a dependency from each source register in the ``Source Registers'' column to each destination register in the ``Destination Registers'' column, from each source register in the ``Source Registers'' column to each CSR in the ``Accumulating CSRs'' column, and from each CSR in the ``Accumulating CSRs'' column to itself, except where annotated otherwise.
-
 \section{CSR Dependency Tracking Granularity}
+\label{sec:csr-granularity}
 
 \begin{table}[h!]
   \centering
@@ -27,11 +19,21 @@ Instructions carry a dependency from each source register in the ``Source Regist
 
 Note: read-only CSRs are not listed, as they do not participate in the definition of syntactic dependencies.
 
-\section{Source and Destination Registers}
+\section{Source and Destination Register Listings}
+\label{sec:source-dest-regs}
+
+This section provides a concrete listing of the source and destination registers for each instruction.
+These listings are used in the definition of syntactic dependencies in Section~\ref{sec:deps}.
+
+The term ``accumulating CSR'' is used to describe a CSR that is both a source and a destination register, but which carries a dependency only from itself to itself.
+
+Instructions carry a dependency from each source register in the ``Source Registers'' column to each destination register in the ``Destination Registers'' column, from each source register in the ``Source Registers'' column to each CSR in the ``Accumulating CSRs'' column, and from each CSR in the ``Accumulating CSRs'' column to itself, except where annotated otherwise.
 
 Key:
 
-$^A$Address source register ~~~~~~~~ $^D$Data source register
+$^A$Address source register
+
+$^D$Data source register
 
 $^\dagger$The instruction does not carry a dependency from any source register to any destination register
 
