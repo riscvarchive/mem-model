@@ -37,7 +37,7 @@
 }}}}
 \put(646,40){\makebox(0,0)[lb]{\smash{{\SetFigFont{11}{13.2}{\rmdefault}{\mddefault}{\updefault}{\color[rgb]{0.294,0.000,0.510}data ppo}%
 }}}}
-\put(85,-529){\makebox(0,0)[lb]{\smash{{\SetFigFont{11}{13.2}{\rmdefault}{\mddefault}{\updefault}{\color[rgb]{0.294,0.000,0.510}data ppo}%
+\put(85,-529){\makebox(0,0)[lb]{\smash{{\SetFigFont{11}{13.2}{\rmdefault}{\mddefault}{\updefault}{\color[rgb]{0.294,0.000,0.510}     ppo}%
 }}}}
 \put(85,-1339){\makebox(0,0)[lb]{\smash{{\SetFigFont{11}{13.2}{\rmdefault}{\mddefault}{\updefault}{\color[rgb]{0.294,0.000,0.510}data ppo}%
 }}}}
