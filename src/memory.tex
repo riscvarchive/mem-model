@@ -1339,8 +1339,6 @@ let RCsc = Acq|Rel|AcqRel
 (* Amo events are both R and W, rmw relate paired lr/sc *)
 let AMO = R & W
 let StCond = range(rmw)
-(* Add "artificial" data dependencies, ie paired lr/sc *)
-let data = data | rmw
 
 (*************)
 (* ppo rules *)
