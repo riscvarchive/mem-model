@@ -142,12 +142,10 @@ for the SLT/SLTU instructions.  More specific failure codes might be
 defined in future versions or extensions to the ISA.
 \end{commentary}
 
-The execution environment may require that the address held in {\em rs1} be
+For LR and SC, the A extension requires that the address held in {\em rs1} be
 naturally aligned to the size of the operand (i.e., eight-byte aligned for
-64-bit words and four-byte aligned for 32-bit words).  If, in such an
-execution environment, an LR or SC address is not naturally aligned,
-a misaligned address exception will be generated.  Support for misaligned
-atomics is defined in the ``Zam'' extension (Chapter~\ref{sec:zam}).
+64-bit words and four-byte aligned for 32-bit words).  If the address is
+not naturally aligned, a misaligned address exception will be generated.
 
 \label{lrscseq}
 
@@ -324,12 +322,12 @@ to the address in {\em rs1}. AMOs can either operate on 64-bit (RV64
 only) or 32-bit words in memory.  For RV64, 32-bit AMOs always
 sign-extend the value placed in {\em rd}.
 
-The execution environment may require that the address held in {\em rs1} be
+For AMOs, the A extension requires that the address held in {\em rs1} be
 naturally aligned to the size of the operand (i.e., eight-byte aligned for
-64-bit words and four-byte aligned for 32-bit words).  If, in such an execution
-environment, an AMO address is not naturally aligned, a misaligned address
-exception will be generated.  Support for misaligned atomics is defined in the
-``Zam'' extension (Chapter~\ref{sec:zam}).
+64-bit words and four-byte aligned for 32-bit words).  If the address is
+not naturally aligned, a misaligned address exception will be generated.
+The ``Zam'' extension, described in Chapter~\ref{sec:zam}, relaxes this
+requirement and specifies the semantics of misaligned AMOs.
 
 The operations supported are swap, integer add, logical AND, logical
 OR, logical XOR, and signed and unsigned integer maximum and minimum.
