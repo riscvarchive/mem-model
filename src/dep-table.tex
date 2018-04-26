@@ -150,6 +150,8 @@ $^\ddagger$The instruction carries dependencies from source register(s) to desti
    & Source    & Destination & Accumulating \\
    & Registers & Registers   & CSRs \\
    \cline{2-4}
+   CSRRWI$^\ddagger$ & {\em csr}$^*$ & {\em rd}, {\em csr} & & $^*$unless {\em rd}={\tt x0} \\
+   \cline{2-4}
    CSRRSI$^\ddagger$ & {\em csr} & {\em rd}, {\em csr}$^*$ & & $^*$unless uimm[4:0]=0  \\
    \cline{2-4}
    CSRRCI$^\ddagger$ & {\em csr} & {\em rd}, {\em csr}$^*$ & & $^*$unless uimm[4:0]=0  \\
