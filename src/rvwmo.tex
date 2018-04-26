@@ -90,7 +90,7 @@ This section provides a general definition of all of these terms; however, Secti
 
 In general, a register $r$ other than {\tt x0} is a {\em source register} for an instruction $i$ if any of the following hold:
 \begin{itemize}
-  \item In the opcode of $i$, {\em rs1} or {\em rs2} is set to $r$
+  \item In the opcode of $i$, {\em rs1}, {\em rs2}, or {\em rs3} is set to $r$
   \item $i$ is a CSR instruction, and in the opcode of $i$, {\em csr} is set to $r$, unless $i$ is CSRRW or CSRRWI and {\em rd} is set to {\tt x0}
   \item $r$ is a CSR and an implicit source register for $i$, as defined in Section~\ref{sec:source-dest-regs}
   \item $r$ is a CSR that aliases with another source register for $i$
