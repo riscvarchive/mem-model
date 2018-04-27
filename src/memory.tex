@@ -653,6 +653,8 @@ However, a dependency cannot originate or be used to enforce ordering from the {
   {
     \tt\small
     \begin{tabular}{cl||cl}
+    \multicolumn{4}{c}{Initial values: 0(s0)=1; 0(s1)=1} \\
+    \\
     \multicolumn{2}{c}{Hart 0} & \multicolumn{2}{c}{Hart 1} \\
     \hline
       (a) & ld a0,0(s0)    & (e) & ld a3,0(s2) \\
@@ -763,7 +765,7 @@ Likewise, a store generally cannot be performed until it is known that preceding
     (b) & fence rw,rw & (e) & lw a2, 0(a1)   \\
     (c) & sw t1,0(s1) & (f) & sw t1, 0(s0)   \\
     \hline
-    \multicolumn{4}{c}{Outcome: {\tt a0=0}, {\tt a1=0}}
+    \multicolumn{4}{c}{Outcome: {\tt a0=1}, {\tt a1=1}}
     \end{tabular}  
     & &
     \input{figs/B15.pdf_t}
@@ -1313,81 +1315,77 @@ We expect that any or all of the following possible future extensions would be c
 \section{Known Issues}
 \label{sec:memory:discrepancies}
 
-\begin{commentary}
-  This should be cleaned up before final release!
-\end{commentary}
-
 \subsection{Mixed-size RSW}
+\label{sec:memory:discrepancies:mixedrsw}
 
-There is a known discrepancy between the operational and axiomatic specifications regarding the following tests:
-
-\begin{verbbox}
-(allowed by the axiomatic model, forbidden by the operational)
-
-Hart-0
-a:R x=1
-b:fence rw,rw
-c:W y=1
-
-Hart-1
-d:R y=1
-e:R z[0]=0; W z[0]=1 (AMO release-RCsc)
-f:R z[0,1]=[1,0]
-g:R z[1]=0
-  <addr>
-h:W x=1
-\end{verbbox}
 \begin{figure}[h!]
   \centering\small
-  \theverbbox
-  \caption{Mixed-size discrepancy}
+  {\tt
+    \begin{tabular}{cl||cl}
+    \multicolumn{2}{c}{Hart 0} & \multicolumn{2}{c}{Hart 1} \\
+    \hline
+          & li t1, 1    &     & li t1, 1    \\
+      (a) & lw a0,0(s0) & (d) & lw a1,0(s1) \\
+      (b) & fence rw,rw & (e) & amoswap.rl a2,t1,0(s2) \\
+      (c) & sw t1,0(s1) & (f) & ld a3,0(s2) \\
+          &             & (g) & lw a4,4(s0) \\
+          &             &     & xor a5,a4,a4  \\
+          &             &     & add s0,s0,a5  \\
+          &             & (h) & sw a2,0(s0)   \\
+      \hline
+      \multicolumn{4}{c}{Outcome: {\tt a0=1}, {\tt a1=1}, {\tt a2=0}, {\tt a3=1}, {\tt a4=0}}
+    \end{tabular}
+  }
+  \caption{Mixed-size discrepancy (permitted by axiomatic models, forbidden by operational model)}
   \label{fig:litmus:discrepancy:rsw1}
 \end{figure}
 
-\begin{verbbox}
-(allowed by the axiomatic model, forbidden by the operational)
-
-Hart-0
-a:R x=1
-b:fence rw,rw
-c:W y[0]=1
-
-Hart-1
-d:R y[0,1]=[1,0]
-e:R y[1]=0
-  <addr>
-f:W x=1
-\end{verbbox}
 \begin{figure}[h!]
   \centering\small
-  \theverbbox
-  \caption{Mixed-size discrepancy}
+  {\tt
+    \begin{tabular}{cl||cl}
+    \multicolumn{2}{c}{Hart 0} & \multicolumn{2}{c}{Hart 1} \\
+    \hline
+          & li t1, 1    &     & li t1, 1      \\
+      (a) & lw a0,0(s0) & (d) & ld a1,0(s1)   \\
+      (b) & fence rw,rw & (e) & lw a2,4(s1)   \\
+      (c) & sw t1,0(s1) &     & xor a3,a2,a2  \\
+          &             &     & add s0,s0,a3  \\
+          &             & (f) & sw a2,0(s0)   \\
+      \hline
+      \multicolumn{4}{c}{Outcome: {\tt a0=0}, {\tt a1=1}, {\tt a2=0}}
+    \end{tabular}
+  }
+  \caption{Mixed-size discrepancy (permitted by axiomatic models, forbidden by operational model)}
   \label{fig:litmus:discrepancy:rsw2}
 \end{figure}
 
-\begin{verbbox}
-(allowed by the axiomatic model, forbidden by the operational)
-
-Hart-0
-a:R x=1
-b:fence rw,rw
-c:W y[0]=1
-
-Hart-1
-d:W y[1]=11
-e:R y[0,1]=[1,11]
-f:R y[1]=11
-  <addr>
-g:W x=1
-\end{verbbox}
 \begin{figure}[h!]
   \centering\small
-  \theverbbox
-  \caption{Mixed-size discrepancy}
-  \label{fig:litmus:discrepancy:rsw2}
+  {\tt
+    \begin{tabular}{cl||cl}
+    \multicolumn{2}{c}{Hart 0} & \multicolumn{2}{c}{Hart 1} \\
+    \hline
+          & li t1, 1    &     & li t1, 1      \\
+      (a) & lw a0,0(s0) & (d) & sw t1,4(s1)   \\
+      (b) & fence rw,rw & (e) & ld a1,0(s1)   \\
+      (c) & sw t1,0(s1) & (f) & lw a2,4(s1)   \\
+          &             &     & xor a3,a2,a2  \\
+          &             &     & add s0,s0,a3  \\
+          &             & (g) & sw a2,0(s0)   \\
+      \hline
+      \multicolumn{4}{c}{Outcome: {\tt a0=1}, {\tt a1=0x100000001}, {\tt a1=1}}
+    \end{tabular}
+  }
+  \caption{Mixed-size discrepancy (permitted by axiomatic models, forbidden by operational model)}
+  \label{fig:litmus:discrepancy:rsw3}
 \end{figure}
 
-We may need a new PPO rule such as the following: $a$ is a load, $b$ is a store, there is a load $m$ between $a$ and $b$, there is a byte $x$ that both $a$ and $m$ read, there is no store between $a$ and $m$ that writes to $x$, and $m$ is PPO before $b$.
+There is a known discrepancy between the operational and axiomatic specifications within the family of mixed-size RSW variants shown in Figures~\ref{fig:litmus:discrepancy:rsw1}--\ref{fig:litmus:discrepancy:rsw3}.
+To address this, we tentatively plan to add the following new PPO rule:
+Memory operation $a$ precedes memory operation $b$ in preserved program order (and hence also in the global memory order) if $a$ precedes $b$ in program order, $a$ and $b$ both access regular main memory (rather than I/O regions), $a$ is a load, $b$ is a store, there is a load $m$ between $a$ and $b$, there is a byte $x$ that both $a$ and $m$ read, there is no store between $a$ and $m$ that writes to $x$, and $m$ precedes $b$ in PPO.
+In other words, in {\sf herd} syntax, we tentatively plan to add ``{\tt (po-loc \& rsw);ppo;[W]}'' to PPO.
+As such, even though this rule is not yet official, we recommend that implementers enforce it nevertheless in order to ensure forwards compatibility with the possible future addition of this rule to RVWMO.
 
 \chapter{Formal Memory Model Specifications}
 

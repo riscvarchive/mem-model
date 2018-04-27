@@ -171,6 +171,10 @@ memory operation $a$ precedes memory operation $b$ in preserved program order (a
     \end{enumerate}
 \end{itemize}
 
+\begin{commentary}
+  We may need to add new PPO rules in the future to cover some situations that arise with partially-overlapping mixed-size memory accesses; see Appendix~\ref{sec:memory:discrepancies:mixedrsw}.
+\end{commentary}
+
 \subsection*{Memory Model Axioms}
 
 An execution of a RISC-V program obeys the RVWMO memory consistency model only if there exists a global memory order conforming to preserved program order and satisfying the {\em load value axiom}, the {\em atomicity axiom}, and the {\em progress axiom}.
