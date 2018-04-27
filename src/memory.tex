@@ -65,7 +65,7 @@ Each figure shows the litmus test code on the left, and a visualization of one p
     \input{figs/B1+A.pdf_t}
 %\input{figs/B1+B.pdf_t} %Another invalid execution
 \end{tabular}
-    \caption{A sample litmus test and one invalid execution ({\tt a0=1}).}
+    \caption{A sample litmus test and one forbidden execution ({\tt a0=1}).}
   \label{fig:litmus:sample}
 \end{figure}
 
@@ -105,9 +105,15 @@ The diagram shown to the right of each litmus test shows a visual representation
 These diagrams use a notation that is common in the memory model literature for constraining the set of possible global memory orders that could produce the execution in question.
 It is also the basis for the \textsf{herd} models presented in Appendix~\ref{sec:herd}.
 This notation is explained in Table~\ref{tab:litmus:key}.
-Of the listed relations, ``rf'' edges between harts, ``co'' edges, ``fr'' edges, and ``ppo'' edges directly constrain the global memory order (as do ``fence'', ``addr'', ``data'', and some ``ctrl'' edges, via ``ppo'').
-Other edges (such as intra-hart ``rf'' edges) are informative but do not constrain the global memory order.
+Of the listed relations, {\sf rf} edges between harts, {\sf co} edges, {\sf fr} edges, and {\sf ppo} edges directly constrain the global memory order (as do {\sf fence}, {\sf addr}, {\sf data}, and some {\sf ctrl} edges, via {\sf ppo}).
+Other edges (such as intra-hart {\sf rf} edges) are informative but do not constrain the global memory order.
 
+For example, in Figure~\ref{fig:litmus:sample}, {\tt a0=1} could occur only if one of the following were true:
+\begin{itemize}
+  \item (b) appears before (a) in global memory order (and in the coherence order {\sf co}).  However, this violates RVWMO PPO rule~\ref{ppo:->st}.  The {\sf co} edge from (b) to (a) highlights this contradiction.
+  \item (a) appears before (b) in global memory order (and in the coherence order {\sf co}).  However, in this case, the Load Value Axiom would be violated, because (a) is not the latest matching store prior to (c) in program order.  The {\sf fr} edge from (c) to (b) highlights this contradiction.
+\end{itemize}
+Since neither of these scenarios satisfies the RVWMO axioms, the outcome {\tt a0=1} is forbidden.
 \section{Explaining the RVWMO Rules}
 In this section, we provide explanation and examples for all of the RVWMO rules and axioms.
 
@@ -152,12 +158,14 @@ Any other hart will therefore observe the load as performing before the store.
       (b) & lw a0,0(s0) & (f) & lw a2,0(s1) \\
       (c) & fence r,r   & (g) & fence r,r   \\
       (d) & lw a1,0(s1) & (h) & lw a3,0(s0) \\
+      \hline
+      \multicolumn{4}{c}{Outcome: {\tt a0=1}, {\tt a1=0}, {\tt a2=1}, {\tt a3=0}}
     \end{tabular}
   }
   &
   \input{figs/B2.pdf_t}
   \end{tabular}
-  \caption{A store buffer forwarding litmus test}
+  \caption{A store buffer forwarding litmus test (outcome permitted)}
   \label{fig:litmus:storebuffer}
 \end{figure}
 
@@ -197,6 +205,51 @@ Nevertheless, even if (b) precedes (a) and/or (f) precedes (e) in the global mem
 Even though (b) precedes (a) in the global memory order, (a) will still be visible to (b) by virtue of sitting in the store buffer at the time (b) executes.
 Therefore, even if (b) precedes (a) in the global memory order, (b) should return the value written by (a) because (a) precedes (b) in program order.
 Likewise for (e) and (f).
+
+\begin{figure}[h!]
+  \centering
+  \begin{tabular}{m{.4\linewidth}@{\qquad}m{.4\linewidth}}
+  {
+    \tt\small
+    \begin{tabular}{cl||cl}
+    \multicolumn{2}{c}{Hart 0} & \multicolumn{2}{c}{Hart 1} \\
+    \hline
+          & li t1, 1    &     & li t1, 1      \\
+      (a) & sw t1,0(s0) &     & LOOP:         \\
+      (b) & fence w,w   & (d) & lw a0,0(s1)   \\
+      (c) & sw t1,0(s1) &     & beqz a0, LOOP \\
+          &             & (e) & sw t1,0(s2)   \\
+          &             & (f) & lw a1,0(s2)   \\
+          &             &     & xor a2,a1,a1  \\
+          &             &     & add s0,s0,a2  \\
+          &             & (g) & lw a2,0(s0)   \\
+      \hline
+      \multicolumn{4}{c}{Outcome: {\tt a0=1}, {\tt a1=1}, {\tt a2=0}}
+    \end{tabular}
+  }
+  &
+  \textcolor{red}{\bf FIXME!!! add figure}
+  %\input{figs/ppoca.pdf_t}
+  \end{tabular}
+  \caption{The ``PPOCA'' store buffer forwarding litmus test (outcome permitted)}
+  \label{fig:litmus:ppoca}
+\end{figure}
+
+Another test that highlights the behavior of store buffers is shown in Figure~\ref{fig:litmus:ppoca}.
+In this example, (d) is ordered before (e) because of the control dependency, and (f) is ordered before (g) because of the address dependency.
+However, (e) is {\em not} necessarily ordered before (f), even though (f) returns the value written by (e).
+This could correspond to the following sequence of events:
+\begin{itemize}
+  \item (e) executes speculatively and enters the second hart's private store buffer (but does not drain to memory)
+  \item (f) executes speculatively and forwards its return value 1 from (e) in the store buffer
+  \item (g) executes speculatively and reads the value 0 from memory
+  \item (a) executes, enters the first hart's private store buffer, and drains to memory
+  \item (b) executes and retires
+  \item (c) executes, enters the first hart's private store buffer, and drains to memory
+  \item (d) executes and reads the value 1 from memory
+  \item (e), (f), and (g) commit, since the speculation turned out to be correct
+  \item (e) drains from the store buffer to memory
+\end{itemize}
 
 \subsection{\nameref*{rvwmo:ax:atom}}
 \label{sec:memory:atomicityaxiom}
@@ -302,12 +355,14 @@ However, because the global memory order corresponds to the order in which loads
           &             & (g) & xor t3,a1,a1 \\
           &             & (h) & add s0,s0,t3 \\
           &             & (i) & lw~ a2,0(s0) \\
+      \hline
+      \multicolumn{4}{c}{Outcome: {\tt a0=1}, {\tt a1=2}, {\tt a2=0}}
     \end{tabular}
   }
   &
   \input{figs/B4.pdf_t}
   \end{tabular}
-  \caption{Litmus test MP+fence.w.w+fri-rfi-addr}
+  \caption{Litmus test MP+fence.w.w+fri-rfi-addr (outcome permitted)}
   \label{fig:litmus:frirfi}
 \end{figure}
 
@@ -346,17 +401,19 @@ Likewise, if two back-to-back loads return the values written by the same store,
           &             & (i) & xor t3,a2,a2 \\
           &             & (j) & add s0,s0,t3 \\
           &             & (k) & lw~ a3,0(s0) \\
+      \hline
+      \multicolumn{4}{c}{Outcome: {\tt a0=1}, {\tt a1=$v$}, {\tt a2=$v$}, {\tt a3=0}}
     \end{tabular}
   }
   &
   \input{figs/B5.pdf_t}
    \end{tabular}
-  \caption{Litmus test RSW}
+  \caption{Litmus test RSW (outcome permitted)}
   \label{fig:litmus:rsw}
 \end{figure}
 
 Consider the litmus test of Figure~\ref{fig:litmus:rsw}.
-The outcome {\tt a0=1}, {\tt a1=$v$},  {\tt a2=$v$}, {\tt a3=0} can be observed by allowing (g) and (h) to be reordered.  This might be done speculatively, and the speculation can be justified by the microarchitecture (e.g., by snooping for cache invalidations and finding none) because replaying (h) after (g) would return the value written by the same store anyway.
+The outcome {\tt a0=1}, {\tt a1=$v$},  {\tt a2=$v$}, {\tt a3=0} (where $v$ is some value written by another hart) can be observed by allowing (g) and (h) to be reordered.  This might be done speculatively, and the speculation can be justified by the microarchitecture (e.g., by snooping for cache invalidations and finding none) because replaying (h) after (g) would return the value written by the same store anyway.
 Hence assuming {\tt a1} and {\tt a2} would end up with the same value written by the same store anyway, (g) and (h) can be legally reordered.
 The global memory order corresponding to this execution would be (h),(k),(a),(c),(d),(g).
 
@@ -602,12 +659,14 @@ However, a dependency cannot originate or be used to enforce ordering from the {
       (b) & lr a1,0(s1)    & (f) & sd a3,0(s0) \\
       (c) & sc a2,a0,0(s1) &                    \\
       (d) & sd a2,0(s2)    &                    \\
+      \hline
+      \multicolumn{4}{c}{Outcome: {\tt a0=0}, {\tt a3=0}}
     \end{tabular}
   }
   & &
   \input{figs/B12.pdf_t}
   \end{tabular}
-  \caption{A variant of the LB litmus test}
+  \caption{A variant of the LB litmus test (outcome forbidden)}
   \label{fig:litmus:successdeps}
 \end{figure}
 
@@ -633,43 +692,56 @@ Such a dependency would only serve to ultimately set up later a dependency from 
 
 \begin{figure}[h!]
   \centering
-  \begin{tabular}{m{.2\linewidth}m{.05\linewidth}m{.2\linewidth}}
+  \begin{tabular}{m{.4\linewidth}m{.05\linewidth}m{.2\linewidth}}
   {
     \tt\small
-    \begin{tabular}{cl}
-      (a) & lw a0, 0(s0)   \\
-      (b) & sw a0, 0(s1)   \\
-      (c) & lw a1, 0(s1)   \\
+    \begin{tabular}{cl||cl}
+    \multicolumn{2}{c}{Hart 0} & \multicolumn{2}{c}{Hart 1} \\
+    \hline
+          & li t1, 1    & (d) & lw a0, 0(s1)   \\
+      (a) & sw t1,0(s0) & (e) & sw a0, 0(s0)   \\
+      (b) & fence w, w  & (f) & lw a1, 0(s0)   \\
+      (c) & sw t1,0(s1) &     &                \\
+      \hline
+      \multicolumn{4}{c}{Outcome: {\tt a0=1}, {\tt a1=0}}
     \end{tabular}
   } & &
   \input{figs/B13.pdf_t}
+  \textcolor{red}{\bf FIXME!!! test has changed}
   \end{tabular}
 
-  \caption{Because of the data dependency from (a) to (b), (a) also precedes (c)}
+  \caption{Because of PPO rule~\ref{ppo:addrdatarfi} and the data dependency from (d) to (e), (d) must also precede (f) in the global memory order (outcome forbidden)}
   \label{fig:litmus:addrdatarfi}
 \end{figure}
 
 PPO rules~\ref{ppo:addrdatarfi} and \ref{ppo:addrpo} reflect behaviors of almost all real processor pipeline implementations.
 Rule~\ref{ppo:addrdatarfi} states that a load cannot forward from a store until the address and data for that store are known.
 Consider Figure~\ref{fig:litmus:addrdatarfi}:
-(c) cannot be executed until the data for (b) has been resolved, because (c) must return the value written by (b) (or by something even later in the global memory order), and the old value must not be clobbered by the writeback of (b) before (a) has had a chance to perform.
-Therefore, (c) will never perform before (a) has performed.
+(f) cannot be executed until the data for (e) has been resolved, because (f) must return the value written by (e) (or by something even later in the global memory order), and the old value must not be clobbered by the writeback of (e) before (d) has had a chance to perform.
+Therefore, (f) will never perform before (d) has performed.
 
 \begin{figure}[h!]
-  \centering  
-  \begin{tabular}{m{.2\linewidth}m{.05\linewidth}m{.2\linewidth}}
+  \centering
+  \begin{tabular}{m{.4\linewidth}m{.05\linewidth}m{.2\linewidth}}
+  {
     \tt\small
-    \begin{tabular}{cl}
-          & li t1, 1       \\
-      (a) & lw a0, 0(s0)   \\
-      (b) & sw a0, 0(s1)   \\
-          & sw t1, 0(s1)   \\
-      (c) & lw a1, 0(s1)   \\
+    \begin{tabular}{cl||cl}
+    \multicolumn{2}{c}{Hart 0} & \multicolumn{2}{c}{Hart 1} \\
+    \hline
+          & li t1, 1    &     & li t1, 1       \\
+      (a) & sw t1,0(s0) & (d) & lw a0, 0(s1)   \\
+      (b) & fence w, w  & (e) & sw a0, 0(s0)   \\
+      (c) & sw t1,0(s1) & (f) & sw t1, 0(s0)   \\
+          &             & (g) & lw a1, 0(s0)   \\
+      \hline
+      \multicolumn{4}{c}{Outcome: {\tt a0=1}, {\tt a1=0}}
     \end{tabular}
-     & &
-    \input{figs/B14.pdf_t}
+  } & &
+  \input{figs/B14.pdf_t}
+  \textcolor{red}{\bf FIXME!!! test has changed}
   \end{tabular}
-  \caption{Because of the extra store between (b) and (c), (a) no longer necessarily precedes (c)}
+
+  \caption{Because of the extra store between (e) and (g), (d) no longer necessarily precedes (g) (outcome permitted)}
   \label{fig:litmus:addrdatarfi_no}
 \end{figure}
 
@@ -681,23 +753,28 @@ Likewise, a store generally cannot be performed until it is known that preceding
 
 \begin{figure}[h!]
   \centering
-  \begin{tabular}{m{.2\linewidth}m{.05\linewidth}m{.2\linewidth}}
+  \begin{tabular}{m{.4\linewidth}m{.05\linewidth}m{.2\linewidth}}
     \tt\small
-    \begin{tabular}{cl}
-        & li t1, 1       \\
-    (a) & lw a0, 0(s0)   \\
-    (b) & lw a1, 0(a0)   \\
-    (c) & sw t1, 0(s1)   \\
+    \begin{tabular}{cl||cl}
+    \multicolumn{2}{c}{Hart 0} & \multicolumn{2}{c}{Hart 1} \\
+    \hline
+        & li t1, 1    &     & li t1, 1       \\
+    (a) & lw a0,0(s0) & (d) & lw a1, 0(s1)   \\
+    (b) & fence rw,rw & (e) & lw a2, 0(a1)   \\
+    (c) & sw t1,0(s1) & (f) & sw t1, 0(s0)   \\
+    \hline
+    \multicolumn{4}{c}{Outcome: {\tt a0=0}, {\tt a1=0}}
     \end{tabular}  
     & &
     \input{figs/B15.pdf_t}
+    \textcolor{red}{\bf FIXME!!! test has changed}
   \end{tabular}
-  \caption{Because of the address dependency from (a) to (b), (a) also precedes (c)}
+  \caption{Because of the address dependency from (d) to (e), (d) also precedes (f) (outcome forbidden)}
   \label{fig:litmus:addrpo}
 \end{figure}
 
 Consider Figure~\ref{fig:litmus:addrpo}:
-(c) cannot be executed until the address for (b) is resolved, because it may turn out that the addresses match; i.e., that {\tt a0=s1}.  Therefore, (c) cannot be sent to memory before (a) has executed and confirmed whether the addresses to indeed overlap.
+(f) cannot be executed until the address for (e) is resolved, because it may turn out that the addresses match; i.e., that {\tt a0=s1}.  Therefore, (f) cannot be sent to memory before (d) has executed and confirmed whether the addresses do indeed overlap.
 
 
 \section{Beyond Main Memory}
