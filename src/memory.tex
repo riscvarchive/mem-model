@@ -400,7 +400,7 @@ Of the ten non-trivial options, only six are commonly used in practice:
 {
 \begin{itemize}
   \item FENCE RW,RW
-  \item FENCE.TWO
+  \item FENCE.TSO
   \item FENCE RW,W
   \item FENCE R,RW
   \item FENCE R,R
@@ -483,8 +483,7 @@ RCpc alone is sufficient for many uses cases in C/C++ but is insufficient for ma
 
 PPO rule~\ref{ppo:pair} indicates that an SC must appear after its paired LR in the global memory order.
 This will follow naturally from the common use of LR/SC to perform an atomic read-modify-write operation due to the inherent data dependency.
-However, PPO rule~\ref{ppo:pair} also applies even when the value being stored does not syntactically depend on the value returned by the paired LR, as would happen for example when using LR/SC to implement an atomic swap operation.
-This helps ensure that standard definitions of atomicity requirements are satisfied.
+However, PPO rule~\ref{ppo:pair} also applies even when the value being stored does not syntactically depend on the value returned by the paired LR.
 
 Lastly, we note that just as with fences, programmers need not worry about ``cumulativity'' when analyzing ordering annotations.
 
@@ -735,9 +734,9 @@ memory access $a$ precedes memory access $b$ in global memory order if $a$ prece
   \item $a$ and $b$ are accesses to I/O regions associated with the same channel (except for channel 0)
 \end{enumerate}
 
-Note that the FENCE instruction distinguishes between memory operations and I/O operations in its predecessor and successor sets.
-To enforce ordering between I/O operations and memory operations, code must use a FENCE with PI, PO, SI, and/or SO, plus PR, PW, SR, and/or SW.
-For example, to enforce ordering between a write to normal memory and an MMIO write to a device register, a FENCE~W,O or stronger is needed.
+Note that the FENCE instruction distinguishes between main memory operations and I/O operations in its predecessor and successor sets.
+To enforce ordering between I/O operations and main memory operations, code must use a FENCE with PI, PO, SI, and/or SO, plus PR, PW, SR, and/or SW.
+For example, to enforce ordering between a write to main memory and an I/O write to a device register, a FENCE~W,O or stronger is needed.
 
 \begin{verbbox}
   sd t0, 0(a0)
