@@ -700,7 +700,7 @@ Consider Figure~\ref{fig:litmus:addrpo}:
 (c) cannot be executed until the address for (b) is resolved, because it may turn out that the addresses match; i.e., that {\tt a0=s1}.  Therefore, (c) cannot be sent to memory before (a) has executed and confirmed whether the addresses to indeed overlap.
 
 
-\section{Beyond Normal Memory}
+\section{Beyond Main Memory}
 
 RVWMO does not currently attempt to formally describe how FENCE.I, SFENCE.VMA, I/O fences, and PMAs behave.
 All of these behaviors will be described by future formalizations.
@@ -751,19 +751,19 @@ For example, to enforce ordering between a write to main memory and an I/O write
 \end{figure}
 
 When a fence is in fact used, implementations must assume that the device may attempt to access memory immediately after receiving the MMIO signal, and subsequent memory accesses from that device to memory must observe the effects of all accesses ordered prior to that MMIO operation.
-In other words, in Figure~\ref{fig:litmus:wo}, suppose {\tt 0(a0)} is in normal memory and {\tt 0(a1)} is the address of a device register in I/O memory.
+In other words, in Figure~\ref{fig:litmus:wo}, suppose {\tt 0(a0)} is in main memory and {\tt 0(a1)} is the address of a device register in I/O memory.
 If the device accesses {\tt 0(a0)} upon receiving the MMIO write, then that load must conceptually appear after the first store to {\tt 0(a0)} according to the rules of the RVWMO memory model.
 In some implementations, the only way to ensure this will be to require that the first store does in fact complete before the MMIO write is issued.
-Other implementations may find ways to be more aggressive, while others still may not need to do anything different at all for I/O and normal memory accesses.
+Other implementations may find ways to be more aggressive, while others still may not need to do anything different at all for I/O and main memory accesses.
 Nevertheless, the RVWMO memory model does not distinguish between these options; it simply provides an implementation-agnostic mechanism to specify the orderings that must be enforced.
 
-Many architectures include separate notions of ``ordering'' and ``completion'' fences, especially as it relates to I/O (as opposed to normal memory).
+Many architectures include separate notions of ``ordering'' and ``completion'' fences, especially as it relates to I/O (as opposed to regular main memory).
 Ordering fences simply ensure that memory operations stay in order, while completion fences ensure that predecessor accesses have all completed before any successors are made visible.
 RISC-V does not explicitly distinguish between ordering and completion fences.
 Instead, this distinction is simply inferred from different uses of the FENCE bits.
 
 For implementations that conform to the RISC-V Unix Platform Specification, I/O devices and DMA operations are required to access memory coherently and via strongly-ordered I/O channels.
-Therefore, accesses to normal memory regions that are shared with I/O devices can also use the standard synchronization mechanisms.
+Therefore, accesses to regular main memory regions that are concurrently accessed by external devices can also use the standard synchronization mechanisms.
 Implementations that do not conform to the Unix Platform Specification and/or in which devices do not access memory coherently will need to use mechanisms (which are currently platform-specific or device-specific) to enforce coherency.
 
 I/O regions in the address space should be considered non-cacheable regions in the PMAs for those regions.  Such regions can be considered coherent by the PMA if they are not cached by any agent.
@@ -1132,12 +1132,12 @@ We also expect the following from the hardware perspective:
 Architectures are free to implement any of the memory model rules as conservatively as they choose.  For example, a hardware implementation may choose to do any or all of the following:
   \begin{itemize}
     \item interpret all fences as if they were FENCE~RW,RW (or {\tt fence iorw,iorw}, if I/O is involved), regardless of the bits actually set
-    \item implement all fences with PW and SR as if they were FENCE~RW,RW (or FENCE~IORW,IORW, if I/O is involved), as PW with SR is the most expensive of the four possible normal memory ordering components anyway
+    \item implement all fences with PW and SR as if they were FENCE~RW,RW (or FENCE~IORW,IORW, if I/O is involved), as PW with SR is the most expensive of the four possible main memory ordering components anyway
     \item emulate {\em aq} and {\em rl} as described in Section~\ref{sec:porting}
     \item enforcing all same-address load-load ordering, even in the presence of patterns such as ``fri-rfi'' and ``RSW''
     \item forbid any forwarding of a value from a store in the store buffer to a subsequent AMO or LR to the same address
     \item forbid any forwarding of a value from an AMO or SC in the store buffer to a subsequent load to the same address
-    \item implement TSO on all memory accesses, and ignore any normal memory fences that do not include PW and SR ordering (e.g., as Ztso implementations will do)
+    \item implement TSO on all memory accesses, and ignore any main memory fences that do not include PW and SR ordering (e.g., as Ztso implementations will do)
     \item implement all atomics to be RCsc or even fully-ordered, regardless of annotation
   \end{itemize}
 
