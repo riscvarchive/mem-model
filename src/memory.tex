@@ -217,7 +217,7 @@ Likewise for (e) and (f).
           & li t1, 1    &     & li t1, 1      \\
       (a) & sw t1,0(s0) &     & LOOP:         \\
       (b) & fence w,w   & (d) & lw a0,0(s1)   \\
-      (c) & sw t1,0(s1) &     & beqz a0, LOOP \\
+      (c) & sw t1,0(s1) &     & bnez a0, LOOP \\
           &             & (e) & sw t1,0(s2)   \\
           &             & (f) & lw a1,0(s2)   \\
           &             &     & xor a2,a1,a1  \\
@@ -861,7 +861,9 @@ The ordering guarantees in this section may not apply beyond a platform-specific
     \hline
     Store             & \tt fence rw,w; s\{b|h|w|d\}               \\
     \hline
-    Atomic RMW        & \tt amo<op>.\{w|d\}.aqrl \textrm{OR} lr.\{w|d\}.aq; <op>; sc.\{w|d\}.aqrl \\
+    \multirow{2}{*}{Atomic RMW}
+    & \tt amo<op>.\{w|d\}.aqrl \textrm{OR} \\
+    & \tt loop:\@ lr.\{w|d\}.aq; <op>; sc.\{w|d\}.aqrl; bnez loop \\
     \hline
     Fence             & \tt fence rw,rw \\
     \hline
@@ -872,9 +874,15 @@ The ordering guarantees in this section may not apply beyond a platform-specific
 
 Table~\ref{tab:tsomappings} provides a mapping from TSO memory operations onto RISC-V memory instructions.
 Normal x86 loads and stores are all inherently acquire-RCpc and release-RCpc operations: TSO enforces all load-load, load-store, and store-store ordering by default.
-Therefore, under RVWMO, all TSO loads must be mapped onto {\tt l\{b|h|w|d\}; fence r,rw}, and all TSO stores must either be mapped onto {\tt amoswap.\{w|d\}.rl~x0} or onto {\tt fence rw,w; s\{b|h|w|d\}}.
+Therefore, under RVWMO, all TSO loads must be mapped onto {\tt l\{b|h|w|d\}; fence r,rw}, and all TSO stores must be mapped onto {\tt fence rw,w; s\{b|h|w|d\}}.
 TSO atomic read-modify-writes and x86 instructions using the LOCK prefix are fully-ordered and can be implemented either with {\tt amo<op>.aqrl} or {\tt lr.aq; <op>; sc.aqrl}.
 In the latter case, the {\em rl} annotation on the LR turns out (for non-obvious reasons) to be redundant and can be omitted.
+
+Alternatives to Table~\ref{tab:tsomappings} are also possible.
+A TSO store can be mapped onto AMOSWAP with {\em rl} set.
+However, since RVWMO PPO Rule~\ref{ppo:amoforward} forbids forwarding of values from AMOs to subsequent loads, the use of AMOSWAP for stores may negatively affect performance.
+A TSO load can be mapped using LR with {\em aq} set: all such LR instructions will be unpaired, but that fact in and of itself does not preclude the use of LR for loads.
+However, again, this mapping may also negatively affect performance if it puts more pressure on the reservation mechanism than was originally intended.
 
 \begin{table}[h!]
   \centering
@@ -944,7 +952,7 @@ Power {\tt isync} maps to RISC-V {\tt fence.i; fence r,r}; the latter fence is n
 Table~\ref{tab:armmappings} provides a mapping from ARM memory operations onto RISC-V memory instructions.
 Since RISC-V does not currently have {\tt l\{b|h|w|d\}.aq[rl]} or  {\tt s\{b|h|w|d\}.[aq]rl} opcodes, ARM load-acquire and store-release operations should be mapped using fences instead.
 Furthermore, in order to enforce store-release-to-load-acquire ordering, there must be a FENCE~RW,RW between the store-release and load-acquire; Table~\ref{tab:armmappings} enforces this by always placing the fence in front of each acquire operation.
-ARM load-reserved and store-conditional instructions can likewise map onto their RISC-V LR and SC equivalents.
+ARM load-exclusive and store-exclusive instructions can likewise map onto their RISC-V LR and SC equivalents.
 ARM {\tt isb} maps to RISC-V {\tt fence.i;~fence~r,r} similarly to how {\tt isync} maps for Power.
 
 \begin{table}[h!]
@@ -974,23 +982,30 @@ ARM {\tt isb} maps to RISC-V {\tt fence.i;~fence~r,r} similarly to how {\tt isyn
     \hline
     \tt smp\_store\_release()  & \tt fence.tso; s\{b|h|w|d\}  \\
     \hline
-  \end{tabular}
-
-  ~
-
-  \begin{tabular}{|l|l|l|}
     \hline
-    Linux Construct            & RVWMO AMO Mapping       & RVWMO LR/SC Mapping\\
+    Linux Construct            & RVWMO AMO Mapping        \\
     \hline
-    \tt atomic\_<op>\_relaxed  & \tt amo<op>.\{w|d\}      & \tt lr.\{w|d\}; <op>; sc.\{w|d\} \\
+    \tt atomic\_<op>\_relaxed  & \tt amo<op>.\{w|d\}      \\
     \hline
-    \tt atomic\_<op>\_acquire  & \tt amo<op>.\{w|d\}.aq   & \tt lr.\{w|d\}.aq; <op>; sc.\{w|d\} \\
+    \tt atomic\_<op>\_acquire  & \tt amo<op>.\{w|d\}.aq   \\
     \hline
-    \tt atomic\_<op>\_release  & \tt amo<op>.\{w|d\}.rl   & \tt lr.\{w|d\}; <op>; sc.\{w|d\}.aqrl$^*$ \\
+    \tt atomic\_<op>\_release  & \tt amo<op>.\{w|d\}.rl   \\
     \hline
-    \tt atomic\_<op>           & \tt amo<op>.\{w|d\}.aqrl & \tt lr.\{w|d\}.aq; <op>; sc.\{w|d\}.aqrl \\
+    \tt atomic\_<op>           & \tt amo<op>.\{w|d\}.aqrl \\
     \hline
-    \multicolumn{3}{p{0.9\textwidth}}{$^*$an alternative mapping of ``{\tt fence.tso;~lr.\{w|d\};~<op>;~sc.\{w|d\}}'' uses more instructions but may have higher performance on some systems, as FENCE.TSO is lighterweight than the implicit full fence in {\tt sc.\{w|d\}.aqrl}.}
+    \hline
+    Linux Construct            & RVWMO LR/SC Mapping\\
+    \hline
+    \tt atomic\_<op>\_relaxed  & \tt loop:\@ lr.\{w|d\}; <op>; sc.\{w|d\}; bnez loop \\
+    \hline
+    \tt atomic\_<op>\_acquire  & \tt loop:\@ lr.\{w|d\}.aq; <op>; sc.\{w|d\}; bnez loop \\
+    \hline
+    \multirow{2}{*}{\tt atomic\_<op>\_release}
+      & \tt loop:\@ lr.\{w|d\}; <op>; sc.\{w|d\}.aqrl$^*$; bnez loop \textrm{OR} \\
+      & \tt fence.tso; loop:\@ lr.\{w|d\}; <op>; sc.\{w|d\}$^*$; bnez loop \\
+    \hline
+    \tt atomic\_<op>           & \tt loop:\@ lr.\{w|d\}.aq; <op>; sc.\{w|d\}.aqrl; bnez loop \\
+    \hline
   \end{tabular}
   \caption{Mappings from Linux memory primitives to RISC-V primitives.  Other constructs (such as spinlocks) should follow accordingly.  Platforms or devices with non-coherent DMA may need additional synchronization (such as cache flush or invalidate mechanisms); currently any such extra synchronization will be device-specific.}
   \label{tab:linuxmappings}
@@ -1067,7 +1082,7 @@ That said, these mappings are subject to change as the Linux Kernel Memory Model
     \hline
     \tt atomic\_store(memory\_order\_release)  & \tt fence rw,w; s\{b|h|w|d\}  \\
     \hline
-    \tt atomic\_store(memory\_order\_seq\_cst) & \tt fence rw,rw; s\{b|h|w|d\} \\
+    \tt atomic\_store(memory\_order\_seq\_cst) & \tt fence rw,w; s\{b|h|w|d\}  \\
     \hline
     \hline
     \tt atomic\_thread\_fence(memory\_order\_acquire)  & \tt fence r,rw \\
@@ -1078,24 +1093,41 @@ That said, these mappings are subject to change as the Linux Kernel Memory Model
     \hline
     \tt atomic\_thread\_fence(memory\_order\_seq\_cst) & \tt fence rw,rw \\
     \hline
-  \end{tabular}
-
-~
-
-  \footnotesize\centering
-  \begin{tabular}{|l|l|l|}
     \hline
-    C/C++ Construct                               & RVWMO AMO Mapping       & RVWMO LR/SC Mapping\\
+    C/C++ Construct                           & RVWMO AMO Mapping        \\
     \hline
-    \tt atomic\_<op>(memory\_order\_relaxed)  & \tt amo<op>.\{w|d\}      & \tt lr.\{w|d\}; <op>; sc.\{w|d\} \\
+    \tt atomic\_<op>(memory\_order\_relaxed)  & \tt amo<op>.\{w|d\}      \\
     \hline
-    \tt atomic\_<op>(memory\_order\_acquire)  & \tt amo<op>.\{w|d\}.aq   & \tt lr.\{w|d\}.aq; <op>; sc.\{w|d\} \\
+    \tt atomic\_<op>(memory\_order\_acquire)  & \tt amo<op>.\{w|d\}.aq   \\
     \hline
-    \tt atomic\_<op>(memory\_order\_release)  & \tt amo<op>.\{w|d\}.rl   & \tt lr.\{w|d\}; <op>; sc.\{w|d\}.rl \\
+    \tt atomic\_<op>(memory\_order\_release)  & \tt amo<op>.\{w|d\}.rl   \\
     \hline
-    \tt atomic\_<op>(memory\_order\_acq\_rel) & \tt amo<op>.\{w|d\}.aqrl & \tt lr.\{w|d\}.aq; <op>; sc.\{w|d\}.rl \\
+    \tt atomic\_<op>(memory\_order\_acq\_rel) & \tt amo<op>.\{w|d\}.aqrl \\
     \hline
-    \tt atomic\_<op>(memory\_order\_seq\_cst) & \tt amo<op>.\{w|d\}.aqrl & \tt lr.\{w|d\}.aqrl; <op>; sc.\{w|d\}.rl \\
+    \tt atomic\_<op>(memory\_order\_seq\_cst) & \tt amo<op>.\{w|d\}.aqrl \\
+    \hline
+    \hline
+    C/C++ Construct                           & RVWMO LR/SC Mapping\\
+    \hline
+    \multirow{2}{*}{\tt atomic\_<op>(memory\_order\_relaxed)}
+      & \tt loop:\@ lr.\{w|d\}; <op>; sc.\{w|d\}; \\
+      & \tt bnez loop \\
+    \hline
+    \multirow{2}{*}{\tt atomic\_<op>(memory\_order\_acquire)}
+      & \tt loop:\@ lr.\{w|d\}.aq; <op>; sc.\{w|d\}; \\
+      & \tt bnez loop \\
+    \hline
+    \multirow{2}{*}{\tt atomic\_<op>(memory\_order\_release)}
+      & \tt loop:\@ lr.\{w|d\}; <op>; sc.\{w|d\}.rl; \\
+      & \tt bnez loop \\
+    \hline
+    \multirow{2}{*}{\tt atomic\_<op>(memory\_order\_acq\_rel)}
+      & \tt loop:\@ lr.\{w|d\}.aq; <op>; sc.\{w|d\}.rl; \\
+      & \tt bnez loop \\
+    \hline
+    \multirow{2}{*}{\tt atomic\_<op>(memory\_order\_seq\_cst)}
+      & \tt loop:\@ lr.\{w|d\}.aqrl; <op>; \\
+      & \tt sc.\{w|d\}.rl; bnez loop \\
     \hline
   \end{tabular}
   \caption{Mappings from C/C++ primitives to RISC-V primitives.}
