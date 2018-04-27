@@ -39,7 +39,7 @@ $^\dagger$The instruction does not carry a dependency from any source register t
 
 $^\ddagger$The instruction carries dependencies from source register(s) to destination register(s) as specified
 
-\begin{tabular}{p{3cm}|p{25mm}|p{3cm}|p{4cm}|p{4cm}}
+\begin{tabular}{p{3cm}|p{3cm}|p{2cm}|p{4cm}|p{4cm}}
   \multicolumn{4}{l}{\bf RV32I Base Integer Instruction Set} \\
   \cline{2-4}
    & Source    & Destination & Accumulating \\
@@ -129,7 +129,7 @@ $^\ddagger$The instruction carries dependencies from source register(s) to desti
    \cline{2-4}
 \end{tabular}
 
-\begin{tabular}{p{3cm}|p{25mm}|p{3cm}|p{4cm}|p{4cm}}
+\begin{tabular}{p{3cm}|p{3cm}|p{2cm}|p{4cm}|p{4cm}}
   \multicolumn{4}{l}{\bf RV32I Base Integer Instruction Set (continued)} \\
   \cline{2-4}
    & Source    & Destination & Accumulating \\
@@ -144,7 +144,7 @@ $^\ddagger$The instruction carries dependencies from source register(s) to desti
    \multicolumn{1}{c}{} & \multicolumn{3}{l}{$\ddagger$carries a dependency from {\em rs1} to {\em csr} and from {\em csr} to {\em rd}}
 \end{tabular}
 
-\begin{tabular}{p{3cm}|p{25mm}|p{3cm}|p{4cm}|p{4cm}}
+\begin{tabular}{p{3cm}|p{3cm}|p{2cm}|p{4cm}|p{4cm}}
   \multicolumn{4}{l}{\bf RV32I Base Integer Instruction Set (continued)} \\
   \cline{2-4}
    & Source    & Destination & Accumulating \\
@@ -157,7 +157,7 @@ $^\ddagger$The instruction carries dependencies from source register(s) to desti
    \multicolumn{1}{c}{} & \multicolumn{3}{l}{$\ddagger$carries a dependency from {\em csr} to {\em rd}}
 \end{tabular}
 
-\begin{tabular}{p{3cm}|p{25mm}|p{3cm}|p{4cm}|p{4cm}}
+\begin{tabular}{p{3cm}|p{3cm}|p{2cm}|p{4cm}|p{4cm}}
   \multicolumn{4}{l}{\bf RV64I Base Integer Instruction Set} \\
   \cline{2-4}
    & Source    & Destination & Accumulating \\
@@ -195,7 +195,7 @@ $^\ddagger$The instruction carries dependencies from source register(s) to desti
    \cline{2-4}
 \end{tabular}
 
-\begin{tabular}{p{3cm}|p{25mm}|p{3cm}|p{4cm}|p{4cm}}
+\begin{tabular}{p{3cm}|p{3cm}|p{2cm}|p{4cm}|p{4cm}}
   \multicolumn{4}{l}{\bf RV32M Standard Extension} \\
   \cline{2-4}
    & Source    & Destination & Accumulating \\
@@ -219,7 +219,7 @@ $^\ddagger$The instruction carries dependencies from source register(s) to desti
    \cline{2-4}
 \end{tabular}
 
-\begin{tabular}{p{3cm}|p{25mm}|p{3cm}|p{4cm}|p{4cm}}
+\begin{tabular}{p{3cm}|p{3cm}|p{2cm}|p{4cm}|p{4cm}}
   \multicolumn{4}{l}{\bf RV64M Standard Extension} \\
   \cline{2-4}
    & Source    & Destination & Accumulating \\
@@ -237,7 +237,7 @@ $^\ddagger$The instruction carries dependencies from source register(s) to desti
    \cline{2-4}
 \end{tabular}
 
-\begin{tabular}{p{3cm}|p{25mm}|p{3cm}|p{4cm}|p{4cm}}
+\begin{tabular}{p{3cm}|p{3cm}|p{2cm}|p{4cm}|p{4cm}}
   \multicolumn{4}{l}{\bf RV32A Standard Extension} \\
   \cline{2-4}
    & Source    & Destination & Accumulating \\
@@ -267,7 +267,7 @@ $^\ddagger$The instruction carries dependencies from source register(s) to desti
    \cline{2-4}
 \end{tabular}
 
-\begin{tabular}{p{3cm}|p{25mm}|p{3cm}|p{4cm}|p{4cm}}
+\begin{tabular}{p{3cm}|p{3cm}|p{2cm}|p{4cm}|p{4cm}}
   \multicolumn{4}{l}{\bf RV64A Standard Extension} \\
   \cline{2-4}
    & Source    & Destination & Accumulating \\
@@ -297,7 +297,7 @@ $^\ddagger$The instruction carries dependencies from source register(s) to desti
    \cline{2-4}
 \end{tabular}
 
-\begin{tabular}{p{3cm}|p{25mm}|p{3cm}|p{4cm}|p{4cm}}
+\begin{tabular}{p{3cm}|p{3cm}|p{2cm}|p{4cm}|p{4cm}}
   \multicolumn{4}{l}{\bf RV32F Standard Extension} \\
   \cline{2-4}
    & Source    & Destination & Accumulating \\
@@ -307,13 +307,13 @@ $^\ddagger$The instruction carries dependencies from source register(s) to desti
    \cline{2-4}
    FSW & {\em rs1}$^A$, {\em rs2}$^D$ &  &   & \\
    \cline{2-4}
-   FMADD.S & {\em rs1}, {\em rs2}, frm$^*$ & {\em rd} & NV, OF, UF, NX & $^*$if rm=111  \\
+   FMADD.S & {\em rs1}, {\em rs2},  {\em rs3}, frm$^*$ & {\em rd} & NV, OF, UF, NX & $^*$if rm=111 \\
    \cline{2-4}
-   FMSUB.S & {\em rs1}, {\em rs2}, frm$^*$ & {\em rd} & NV, OF, UF, NX & $^*$if rm=111  \\
+   FMSUB.S & {\em rs1}, {\em rs2},  {\em rs3}, frm$^*$ & {\em rd} & NV, OF, UF, NX & $^*$if rm=111  \\
    \cline{2-4}
-   FNMSUB.S & {\em rs1}, {\em rs2}, frm$^*$ & {\em rd} & NV, OF, UF, NX & $^*$if rm=111  \\
+   FNMSUB.S & {\em rs1}, {\em rs2},  {\em rs3}, frm$^*$ & {\em rd} & NV, OF, UF, NX & $^*$if rm=111  \\
    \cline{2-4}
-   FNMADD.S & {\em rs1}, {\em rs2}, frm$^*$ & {\em rd} & NV, OF, UF, NX & $^*$if rm=111  \\
+   FNMADD.S & {\em rs1}, {\em rs2},  {\em rs3}, frm$^*$ & {\em rd} & NV, OF, UF, NX & $^*$if rm=111  \\
    \cline{2-4}
    FADD.S & {\em rs1}, {\em rs2}, frm$^*$ & {\em rd} & NV, OF, UF, NX & $^*$if rm=111  \\
    \cline{2-4}
@@ -357,7 +357,7 @@ $^\ddagger$The instruction carries dependencies from source register(s) to desti
    \cline{2-4}
 \end{tabular}
 
-\begin{tabular}{p{3cm}|p{25mm}|p{3cm}|p{4cm}|p{4cm}}
+\begin{tabular}{p{3cm}|p{3cm}|p{2cm}|p{4cm}|p{4cm}}
   \multicolumn{4}{l}{\bf RV64F Standard Extension} \\
   \cline{2-4}
    & Source    & Destination & Accumulating \\
@@ -373,7 +373,7 @@ $^\ddagger$The instruction carries dependencies from source register(s) to desti
    \cline{2-4}
 \end{tabular}
 
-\begin{tabular}{p{3cm}|p{25mm}|p{3cm}|p{4cm}|p{4cm}}
+\begin{tabular}{p{3cm}|p{3cm}|p{2cm}|p{4cm}|p{4cm}}
   \multicolumn{4}{l}{\bf RV32D Standard Extension} \\
   \cline{2-4}
    & Source    & Destination & Accumulating \\
@@ -383,13 +383,13 @@ $^\ddagger$The instruction carries dependencies from source register(s) to desti
    \cline{2-4}
    FSD & {\em rs1}$^A$, {\em rs2}$^D$ &  &   & \\
    \cline{2-4}
-   FMADD.D & {\em rs1}, {\em rs2}, frm$^*$ & {\em rd} & NV, OF, UF, NX & $^*$if rm=111  \\
+   FMADD.D & {\em rs1}, {\em rs2},  {\em rs3}, frm$^*$ & {\em rd} & NV, OF, UF, NX & $^*$if rm=111  \\
    \cline{2-4}
-   FMSUB.D & {\em rs1}, {\em rs2}, frm$^*$ & {\em rd} & NV, OF, UF, NX & $^*$if rm=111  \\
+   FMSUB.D & {\em rs1}, {\em rs2},  {\em rs3}, frm$^*$ & {\em rd} & NV, OF, UF, NX & $^*$if rm=111  \\
    \cline{2-4}
-   FNMSUB.D & {\em rs1}, {\em rs2}, frm$^*$ & {\em rd} & NV, OF, UF, NX & $^*$if rm=111  \\
+   FNMSUB.D & {\em rs1}, {\em rs2},  {\em rs3}, frm$^*$ & {\em rd} & NV, OF, UF, NX & $^*$if rm=111  \\
    \cline{2-4}
-   FNMADD.D & {\em rs1}, {\em rs2}, frm$^*$ & {\em rd} & NV, OF, UF, NX & $^*$if rm=111  \\
+   FNMADD.D & {\em rs1}, {\em rs2},  {\em rs3}, frm$^*$ & {\em rd} & NV, OF, UF, NX & $^*$if rm=111  \\
    \cline{2-4}
    FADD.D & {\em rs1}, {\em rs2}, frm$^*$ & {\em rd} & NV, OF, UF, NX & $^*$if rm=111  \\
    \cline{2-4}
@@ -433,7 +433,7 @@ $^\ddagger$The instruction carries dependencies from source register(s) to desti
    \cline{2-4}
 \end{tabular}
 
-\begin{tabular}{p{3cm}|p{25mm}|p{3cm}|p{4cm}|p{4cm}}
+\begin{tabular}{p{3cm}|p{3cm}|p{2cm}|p{4cm}|p{4cm}}
   \multicolumn{4}{l}{\bf RV64F Standard Extension} \\
   \cline{2-4}
    & Source    & Destination & Accumulating \\
