@@ -745,7 +745,6 @@ Therefore, (f) will never perform before (d) has performed.
     \end{tabular}
   } & &
   \input{figs/A15.pdf_t}
-%  \textcolor{red}{\bf FIXME!!! test has changed}
   \end{tabular}
 
   \caption{Because of the extra store between (e) and (g), (d) no longer necessarily precedes (g) (outcome permitted)}
@@ -760,21 +759,20 @@ Likewise, a store generally cannot be performed until it is known that preceding
 
 \begin{figure}[h!]
   \centering
-  \begin{tabular}{m{.4\linewidth}m{.05\linewidth}m{.2\linewidth}}
+  \begin{tabular}{m{.4\linewidth}m{.05\linewidth}m{.4\linewidth}}
     \tt\small
     \begin{tabular}{cl||cl}
     \multicolumn{2}{c}{Hart 0} & \multicolumn{2}{c}{Hart 1} \\
     \hline
-        & li t1, 1    &     & li t1, 1       \\
+        &             &     & li t1, 1       \\
     (a) & lw a0,0(s0) & (d) & lw a1, 0(s1)   \\
     (b) & fence rw,rw & (e) & lw a2, 0(a1)   \\
-    (c) & sw t1,0(s1) & (f) & sw t1, 0(s0)   \\
+    (c) & sw s2,0(s1) & (f) & sw t1, 0(s0)   \\
     \hline
-    \multicolumn{4}{c}{Outcome: {\tt a0=1}, {\tt a1=1}}
+    \multicolumn{4}{c}{Outcome: {\tt a0=1}, {\tt a1=t}}
     \end{tabular}  
     & &
-    \input{figs/B15.pdf_t}
-    \textcolor{red}{\bf FIXME!!! test has changed}
+    \input{figs/A16.pdf_t}
   \end{tabular}
   \caption{Because of the address dependency from (d) to (e), (d) also precedes (f) (outcome forbidden)}
   \label{fig:litmus:addrpo}
