@@ -217,7 +217,7 @@ Likewise for (e) and (f).
           & li t1, 1    &     & li t1, 1      \\
       (a) & sw t1,0(s0) &     & LOOP:         \\
       (b) & fence w,w   & (d) & lw a0,0(s1)   \\
-      (c) & sw t1,0(s1) &     & bnez a0, LOOP \\
+      (c) & sw t1,0(s1) &     & beqz a0, LOOP \\
           &             & (e) & sw t1,0(s2)   \\
           &             & (f) & lw a1,0(s2)   \\
           &             &     & xor a2,a1,a1  \\
@@ -228,8 +228,7 @@ Likewise for (e) and (f).
     \end{tabular}
   }
   &
-  \textcolor{red}{\bf FIXME!!! add figure}
-  %\input{figs/ppoca.pdf_t}
+  \input{figs/A3.pdf_t}
   \end{tabular}
   \caption{The ``PPOCA'' store buffer forwarding litmus test (outcome permitted)}
   \label{fig:litmus:ppoca}
