@@ -693,22 +693,24 @@ Such a dependency would only serve to ultimately set up later a dependency from 
 
 \begin{figure}[h!]
   \centering
-  \begin{tabular}{m{.4\linewidth}m{.05\linewidth}m{.2\linewidth}}
+  \begin{tabular}{m{.4\linewidth}m{.05\linewidth}m{.4\linewidth}}
   {
     \tt\small
     \begin{tabular}{cl||cl}
     \multicolumn{2}{c}{Hart 0} & \multicolumn{2}{c}{Hart 1} \\
     \hline
           & li t1, 1    & (d) & lw a0, 0(s1)   \\
-      (a) & sw t1,0(s0) & (e) & sw a0, 0(s0)   \\
-      (b) & fence w, w  & (f) & lw a1, 0(s0)   \\
-      (c) & sw t1,0(s1) &     &                \\
+      (a) & sw t1,0(s0) & (e) & sw a0, 0(s2)   \\
+      (b) & fence w, w  & (f) & lw a1, 0(s2)   \\
+      (c) & sw t1,0(s1) &     & xor a2,a1,a1   \\
+          &             &     & add s0,s0,a2   \\
+          &             & (g) & lw a3,0(s0)    \\   
       \hline
-      \multicolumn{4}{c}{Outcome: {\tt a0=1}, {\tt a1=0}}
+      \multicolumn{4}{c}{Outcome: {\tt a0=1}, {\tt a3=0}}
     \end{tabular}
   } & &
-  \input{figs/B13.pdf_t}
-  \textcolor{red}{\bf FIXME!!! test has changed}
+  \input{figs/A14.pdf_t}
+%  \textcolor{red}{\bf FIXME!!! test has changed}
   \end{tabular}
 
   \caption{Because of PPO rule~\ref{ppo:addrdatarfi} and the data dependency from (d) to (e), (d) must also precede (f) in the global memory order (outcome forbidden)}
@@ -723,7 +725,7 @@ Therefore, (f) will never perform before (d) has performed.
 
 \begin{figure}[h!]
   \centering
-  \begin{tabular}{m{.4\linewidth}m{.05\linewidth}m{.2\linewidth}}
+  \begin{tabular}{m{.4\linewidth}m{.05\linewidth}m{.4\linewidth}}
   {
     \tt\small
     \begin{tabular}{cl||cl}
@@ -731,15 +733,19 @@ Therefore, (f) will never perform before (d) has performed.
     \hline
           & li t1, 1    &     & li t1, 1       \\
       (a) & sw t1,0(s0) & (d) & lw a0, 0(s1)   \\
-      (b) & fence w, w  & (e) & sw a0, 0(s0)   \\
-      (c) & sw t1,0(s1) & (f) & sw t1, 0(s0)   \\
-          &             & (g) & lw a1, 0(s0)   \\
+      (b) & fence w, w  & (e) & sw a0, 0(s2)   \\
+      (c) & sw t1,0(s1) & (f) & sw t1, 0(s2)   \\
+          &             & (g) & lw a1, 0(s2)   \\
+          &             &     & xor a2,a1,a1   \\
+          &             &     & add s0,s0,a2   \\
+          &             & (h) & lw a3,0(s0)    \\   
+
       \hline
       \multicolumn{4}{c}{Outcome: {\tt a0=1}, {\tt a1=0}}
     \end{tabular}
   } & &
-  \input{figs/B14.pdf_t}
-  \textcolor{red}{\bf FIXME!!! test has changed}
+  \input{figs/A15.pdf_t}
+%  \textcolor{red}{\bf FIXME!!! test has changed}
   \end{tabular}
 
   \caption{Because of the extra store between (e) and (g), (d) no longer necessarily precedes (g) (outcome permitted)}
