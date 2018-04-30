@@ -1331,9 +1331,9 @@ We expect that any or all of the following possible future extensions would be c
     \hline
           & li t1, 1    &     & li t1, 1    \\
       (a) & lw a0,0(s0) & (d) & lw a1,0(s1) \\
-      (b) & fence rw,rw & (e) & amoswap.rl a2,t1,0(s2) \\
+      (b) & fence rw,rw & (e) & amoswap.w.rl a2,t1,0(s2) \\
       (c) & sw t1,0(s1) & (f) & ld a3,0(s2) \\
-          &             & (g) & lw a4,4(s0) \\
+          &             & (g) & lw a4,4(s2) \\
           &             &     & xor a5,a4,a4  \\
           &             &     & add s0,s0,a5  \\
           &             & (h) & sw a2,0(s0)   \\
