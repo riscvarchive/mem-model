@@ -933,7 +933,7 @@ Power {\tt isync} maps to RISC-V {\tt fence.i; fence r,r}; the latter fence is n
     \hline
     Load-Exclusive            & \tt lr.\{w|d\}  \\
     \hline
-    Load-Acquire-Exclusive    & \tt fence rw, rw; lr.\{w|d\}.aq \\
+    Load-Acquire-Exclusive    & \tt lr.\{w|d\}.aq.rl \\
     \hline
     Store                     & \tt s\{b|h|w|d\}  \\
     \hline
@@ -959,7 +959,7 @@ Power {\tt isync} maps to RISC-V {\tt fence.i; fence r,r}; the latter fence is n
 Table~\ref{tab:armmappings} provides a mapping from ARM memory operations onto RISC-V memory instructions.
 Since RISC-V does not currently have {\tt l\{b|h|w|d\}.aq[rl]} or  {\tt s\{b|h|w|d\}.[aq]rl} opcodes, ARM load-acquire and store-release operations should be mapped using fences instead.
 Furthermore, in order to enforce store-release-to-load-acquire ordering, there must be a FENCE~RW,RW between the store-release and load-acquire; Table~\ref{tab:armmappings} enforces this by always placing the fence in front of each acquire operation.
-ARM load-exclusive and store-exclusive instructions can likewise map onto their RISC-V LR and SC equivalents.
+ARM load-exclusive and store-exclusive instructions can likewise map onto their RISC-V LR and SC equivalents; but, instead of placing a FENCE~RW,RW in front of {\tt lr.\{w|d\}.aq} we add {\tt .rl} to it.
 ARM {\tt isb} maps to RISC-V {\tt fence.i;~fence~r,r} similarly to how {\tt isync} maps for Power.
 
 \begin{table}[h!]
