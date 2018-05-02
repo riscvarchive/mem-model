@@ -375,8 +375,9 @@ Here we decompose them to one-byte accesses as this granularity subsumes all oth
 \paragraph{Satisfy memory load operation by forwarding from unpropagated stores}\label{omm:sat_by_forwarding}
 For a non-AMO load instruction instance $i$ in state {\sc Pending\_mem\_loads}({\it load\_continuation}), and a memory load operation $mlo$ in $i.\textit{mem\_loads}$ that has unsatisfied slices, the memory load operation can be partially or entirely satisfied by forwarding from unpropagated memory store operations by store instruction instances that are program-order-before $i$ if:
 \begin{enumerate}
-\item all program-order-previous {\tt fence} instructions with {\tt .sr} set are finished;
-\item for every program-order-previous {\tt fence.tso} instruction, $f$, that is not finished, all load instructions that are program-order-before $f$ are finished;
+\item all program-order-previous {\tt fence} instructions with {\tt .sr} and {\tt .pw} set are finished;
+\item for every program-order-previous {\tt fence} instruction, $f$, with {\tt .sr} and {\tt .pr} set, and {\tt .pw} not set, if $f$ is not finished then all load instructions that are program-order-before $f$ are entirely satisfied;
+\item for every program-order-previous {\tt fence.tso} instruction, $f$, that is not finished, all load instructions that are program-order-before $f$ are entirely satisfied;
 % \item all program-order-previous {\tt fence.i} instructions are finished;
 \item if $i$ is a load-acquire-RCsc, all program-order-previous store-releases-RCsc are finished;
 \item if $i$ is a load-acquire-release, all program-order-previous instructions are finished;
@@ -386,27 +387,30 @@ For a non-AMO load instruction instance $i$ in state {\sc Pending\_mem\_loads}({
 
 Let $msoss$ be the set of all unpropagated memory store operation slices from non-{\tt sc} store instruction instances that are program-order-before $i$ and have already calculated the value to be stored, that overlap with the unsatisfied slices of $mlo$, and which are not superseded by intervening stores operations or store operations that are read from by an intervening loads.
 The last condition requires, for each memory store operation slice $msos$ in $msoss$ from instruction $i'$:
-\begin{itemize}
+\begin{tightlist}
 \item that there is no store instruction program-order-between $i$ and $i'$ with a memory store operation overlapping $msos$; and
 \item that there is no load instruction program-order-between $i$ and $i'$ that was satisfied from an overlapping memory store operation slice from a different hart.
-\end{itemize}
+\end{tightlist}
+
 Action:
 \begin{enumerate}
 \item update $i.\textit{mem\_loads}$ to indicate that $mlo$ was satisfied by $msoss$; and
 \item restart any speculative instructions which have violated coherence as a result of this, i.e., for every non-finished instruction $i'$ that is a program-order-successor of $i$, and every memory load operation $mlo'$ of $i'$ that was satisfied from $msoss'$, if there exists a memory store operation slice $msos'$ in $msoss'$, and an overlapping memory store operation slice from a different memory store operation in $msoss$, and $msos'$ is not from an instruction that is a program-order-successor of $i$, restart $i'$ and its {\em restart-dependents}.
 \end{enumerate}
 Where, the {\em restart-dependents} of instruction $j$ are:
-\begin{itemize}
-\item if $j$ is a load-acquire, all the program-order-successors of $j$;
+\begin{tightlist}
 \item program-order-successors of $j$ that have data-flow dependency on a register write of $j$;
-\item program-order-successors of $j$ that have a memory load operation that reads from a memory store operation of $j$ (by forwarding); and
-\item (recursively) all the restart-dependents of all the instruction instances above.
-\end{itemize}
+\item program-order-successors of $j$ that have a memory load operation that reads from a memory store operation of $j$ (by forwarding);
+\item if $j$ is a load-acquire, all the program-order-successors of $j$;
+\item if $j$ is a load, for every {\tt fence}, $f$, with {\tt .sr} and {\tt .pr} set, and {\tt .pw} not set, that is program-order-successors of $j$, all the load instructions that are program-order-successors of $f$;
+\item if $j$ is a load, for every {\tt fence.tso}, $f$, that is program-order-successors of $j$, all the load instructions that are program-order-successors of $f$;
+and \item (recursively) all the restart-dependents of all the instruction instances above.
+\end{tightlist}
 
 \begin{commentary}
 Forwarding memory store operations to a memory load might satisfy only some slices of the load, leaving other slices unsatisfied.
 
-A program-order-previous store operation that was not available when taking the transition above might make $msoss$ unsound (violating coherence) when it becomes available.
+A program-order-previous store operation that was not available when taking the transition above might make $msoss$ provisionally unsound (violating coherence) when it becomes available.
 That store will prevent the load from being finished (see \nameref{omm:finish}), and will cause it to restart when that store operation is propagated (see \nameref{omm:prop_store}).
 
 A consequence of the transition condition above is that store-release-RCsc memory store operations cannot be forwarded to load-acquire-RCsc instructions:
@@ -415,16 +419,7 @@ $msoss$ does not include memory store operations from finished stores (as those 
 
 
 \paragraph{Satisfy memory load operation from memory}\label{omm:sat_from_mem}
-For an instruction instance $i$ of a non-AMO load instruction or an AMO instruction in the context of the ``\nameref{omm:do_amo}'' transition, any memory load operation $mlo$ in $i.\textit{mem\_loads}$ that has unsatisfied slices, can be satisfied from memory if:
-\begin{enumerate}
-\item all program-order-previous {\tt fence} instructions with {\tt .sr} set are finished;
-\item for every program-order-previous {\tt fence.tso} instruction, $f$, that is not finished, all load instructions that are program-order-before $f$ are finished;
-% \item all program-order-previous {\tt fence.i} instructions are finished;
-\item if $i$ is a load-acquire-RCsc, all program-order-previous store-releases-RCsc are finished;
-\item if $i$ is a load-acquire-release, all program-order-previous instructions are finished;
-\item all non-finished program-order-previous load-acquire instructions are entirely satisfied; and
-\item all program-order-previous store-acquire-release instructions are finished.
-\end{enumerate}
+For an instruction instance $i$ of a non-AMO load instruction or an AMO instruction in the context of the ``\nameref{omm:do_amo}'' transition, any memory load operation $mlo$ in $i.\textit{mem\_loads}$ that has unsatisfied slices, can be satisfied from memory if all the conditions of \nameref{omm:sat_by_forwarding} are satisfied.
 Action: let $msoss$ be the memory store operation slices from memory covering the unsatisfied slices of $mlo$, and apply the action of \nameref{omm:sat_by_forwarding}.
 
 \begin{commentary}
@@ -625,7 +620,9 @@ A non-finished instruction instance $i$ in state {\sc Plain}({\sc Done}) can be 
 \begin{enumerate}
 \item if $i$ is a load instruction:
   \begin{enumerate}
-  \item all program-order-previous load-acquire instructions are finished; and
+  \item all program-order-previous load-acquire instructions are finished;
+  \item all program-order-previous {\tt fence} instructions with {\tt .sr} set are finished;
+  \item for every program-order-previous {\tt fence.tso} instruction, $f$, that is not finished, all load instructions that are program-order-before $f$ are finished; and
   \item it is guaranteed that the values read by the memory load operations of $i$ will not cause coherence violations, i.e., for any program-order-previous instruction instance $i'$, let $\textit{cfp}$ be the combined footprint of propagated memory store operations from store instructions program-order-between $i$ and $i'$, and {\em fixed memory store operations} that were forwarded to $i$ from store instructions program-order-between $i$ and $i'$ including $i'$, and let $\overline{\textit{cfp}}$ be the complement of $\textit{cfp}$ in the memory footprint of $i$.
   If $\overline{\textit{cfp}}$ is not empty:
     \begin{enumerate}
