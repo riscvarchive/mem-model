@@ -52,19 +52,14 @@
 
 % Custom list environments
 
-\newenvironment{tightlist}
-{\begin{itemize}
- \setlength{\parsep}{0pt}
- \setlength{\itemsep}{-2pt}}
-{\end{itemize}}
+\newlist{tightlist}{itemize}{1}
+\setlist[tightlist]{label=\textbullet,nosep}
 
 \newenvironment{titledtightlist}[1]
 {\noindent
  ~~\textbf{#1}
- \begin{itemize}
- \setlength{\parsep}{0pt}
- \setlength{\itemsep}{-2pt}}
-{\end{itemize}}
+ \begin{tightlist}}
+{\end{tightlist}}
 
 \newenvironment{commentary}
 { \vspace{-0.2in}
